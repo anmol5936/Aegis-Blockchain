@@ -99,7 +99,6 @@ class BankServerMonitorAgent:
                 # Flush messages every few iterations or after a certain time
                 # For this agent, flushing after each message is fine given the low frequency
                 self.producer.flush() # Ensure all messages for this cycle are sent
-                time.sleep(random.randint(15, 30))  # Sleep for 15-30 seconds (reduced for more frequent updates)
         except KeyboardInterrupt:
             logging.info("BankServerMonitorAgent stopped by user.")
         except Exception as e:

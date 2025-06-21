@@ -802,8 +802,6 @@ class TransactionRouterRecoveryAgent:
                             logger.error(f"Unstake transaction failed for rec {rec_id}: {e}", exc_info=True)
                     else:
                         logger.error(f"PoolFactory contract not initialized for rec {rec_id}")
-                else:
-                    logger.warning(f"Unknown recovery method '{method}' for rec {rec_id}. Re-queueing.")
                     self.redis_client.rpush(RECOVERY_PAYMENTS_QUEUE, message_json)
 
                 self.kafka_producer.poll(0)
