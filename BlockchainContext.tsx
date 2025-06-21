@@ -77,11 +77,7 @@ interface IBlockchainContext {
     merchantAddress: string,
     amount: string
   ) => Promise<boolean>;
-  repayOnChain: (
-    poolAddress: string,
-    debtIndex: number,
-    amount: string
-  ) => Promise<boolean>;
+  repayOnChain: () => Promise<boolean>;
 }
 
 const defaultBlockchainContextState: IBlockchainContext = {
@@ -913,11 +909,8 @@ export const StateContextProvider = ({ children }) => {
     ]
   );
 
-  const repayOnChain = async (
-    poolAddress: string,
-    debtIndex: number,
-    amount: string
-  ): Promise<boolean> => {
+  const repayOnChain = useCallback(async (): Promise<boolean> => {
+    console.log("=== repayOnChain ===");
     if (!signer || !address) {
       addAppNotification("Please connect your wallet first", "error");
       return false;
@@ -926,180 +919,267 @@ export const StateContextProvider = ({ children }) => {
     try {
       setIsLoading(true);
 
-      // Validate inputs
-      if (!ethers.utils.isAddress(poolAddress) || debtIndex < 0 || !amount) {
-        addAppNotification(
-          "Invalid pool address, debt index, or amount",
-          "error"
-        );
-        setIsLoading(false);
-        return false;
-      }
-
-      const poolContract = getLiquidityPoolContract(poolAddress);
-      if (!poolContract) {
-        addAppNotification("Pool contract not found", "error");
-        setIsLoading(false);
-        return false;
-      }
-
-      // Fetch and validate debt from contract
-      let userDebts;
-      try {
-        userDebts = await poolContract.getUserDebts(address);
-      } catch (error) {
-        addAppNotification("Failed to fetch user debts from contract", "error");
-        setIsLoading(false);
-        return false;
-      }
-
-      if (debtIndex >= userDebts.length) {
-        addAppNotification("Invalid debt index", "error");
-        setIsLoading(false);
-        return false;
-      }
-
-      const debt = userDebts[debtIndex];
-      if (debt.isRepaid) {
-        addAppNotification("Debt already repaid", "error");
-        setIsLoading(false);
-        return false;
-      }
-
-      const debtAmountWei = debt.amount;
-      const amountWei = ethers.utils.parseUnits(
-        amount,
-        stakingTokenInfo?.decimals || 18
-      );
-
-      if (amountWei.gt(debtAmountWei)) {
-        addAppNotification("Repayment amount exceeds debt", "error");
-        setIsLoading(false);
-        return false;
-      }
-
-      // Check user token balance
+      // Get user balance once to avoid multiple calls
       const userBalance = await getTokenBalance(address);
-      const userBalanceWei = ethers.utils.parseUnits(
+      let remainingBalanceWei = ethers.utils.parseUnits(
         userBalance,
         stakingTokenInfo?.decimals || 18
       );
 
-      if (userBalanceWei.lt(amountWei)) {
+      if (remainingBalanceWei.eq(0)) {
         addAppNotification("Insufficient token balance for repayment", "error");
         setIsLoading(false);
         return false;
       }
 
-      // Check and handle token approval
-      const currentAllowance = await getTokenAllowance(poolAddress);
-      const currentAllowanceWei = ethers.utils.parseUnits(
-        currentAllowance,
-        stakingTokenInfo?.decimals || 18
-      );
-
-      if (currentAllowanceWei.lt(amountWei)) {
-        addAppNotification("Approving tokens for repayment...", "info");
-        const approvalTx = await approveToken(poolAddress, amount);
-        if (!approvalTx) {
-          addAppNotification("Token approval failed", "error");
-          setIsLoading(false);
-          return false;
-        }
-
-        // Wait for approval transaction to be mined
-        await approvalTx.wait();
-        addAppNotification("Token approval confirmed", "success");
+      // Fetch all pools
+      const pools = await fetchBlockchainPools();
+      if (!pools.length) {
+        addAppNotification("No pools found", "info");
+        setIsLoading(false);
+        return true; // No debts to repay
       }
 
-      // Estimate gas first to catch potential revert reasons
-      try {
-        const gasEstimate = await poolContract.estimateGas.repayDebt(
-          debtIndex,
-          amountWei
-        );
-        console.log("Gas estimate for repayDebt:", gasEstimate.toString());
+      let allSuccessful = true;
 
-        // Add 20% buffer to gas limit
-        const gasLimit = gasEstimate.mul(120).div(100);
+      // Iterate through each pool
+      for (const pool of pools) {
+        const poolAddress = pool.id;
+        const poolContract = getLiquidityPoolContract(poolAddress);
+        if (!poolContract) {
+          addAppNotification(
+            `Pool contract not found for ${poolAddress}`,
+            "error"
+          );
+          allSuccessful = false;
+          continue;
+        }
 
-        addAppNotification("Initiating repay transaction...", "info");
-        const repayTx = await poolContract.repayDebt(debtIndex, amountWei, {
-          gasLimit: gasLimit,
-        });
-
-        addAppNotification(
-          `Repay transaction sent. Hash: ${repayTx.hash.substring(0, 10)}...`,
-          "info"
-        );
-
-        const receipt = await repayTx.wait();
-
-        if (receipt.status === 1) {
-          const formattedAmount = ethers.utils.formatUnits(
-            amountWei,
-            stakingTokenInfo?.decimals || 18
+        // Get all user debts
+        let userDebts;
+        try {
+          userDebts = await poolContract.getUserDebts(address);
+        } catch (error) {
+          console.error(
+            `Failed to fetch debts for pool ${poolAddress}:`,
+            error
           );
           addAppNotification(
-            `Successfully repaid ${formattedAmount} tokens`,
+            `Failed to fetch debts for pool ${poolAddress}`,
+            "error"
+          );
+          allSuccessful = false;
+          continue;
+        }
+
+        // Create array of unpaid debts with their original indices
+        const unpaidDebtsWithIndices = userDebts
+          .map((debt: any, index: number) => ({
+            debt: {
+              user: debt.user,
+              merchantAddress: debt.merchantAddress,
+              amount: debt.amount,
+              timestamp: debt.timestamp.toNumber(),
+              isRepaid: debt.isRepaid,
+            },
+            index,
+          }))
+          .filter(({ debt }) => !debt.isRepaid);
+
+        if (!unpaidDebtsWithIndices.length) {
+          console.log(`No unpaid debts found for pool ${poolAddress}`);
+          continue;
+        }
+
+        // Check and handle token approval for the pool
+        const currentAllowance = await getTokenAllowance(poolAddress);
+        const currentAllowanceWei = ethers.utils.parseUnits(
+          currentAllowance,
+          stakingTokenInfo?.decimals || 18
+        );
+
+        const totalDebtAmountWei = unpaidDebtsWithIndices.reduce(
+          (sum, { debt }) => sum.add(debt.amount),
+          ethers.BigNumber.from(0)
+        );
+
+        if (currentAllowanceWei.lt(totalDebtAmountWei)) {
+          addAppNotification(
+            `Approving tokens for pool ${poolAddress}...`,
+            "info"
+          );
+          const approvalAmount = ethers.utils.formatUnits(
+            totalDebtAmountWei,
+            stakingTokenInfo?.decimals || 18
+          );
+          const approvalTx = await approveToken(poolAddress, approvalAmount);
+          if (!approvalTx) {
+            addAppNotification(
+              `Token approval failed for pool ${poolAddress}`,
+              "error"
+            );
+            allSuccessful = false;
+            continue;
+          }
+
+          await approvalTx.wait();
+          addAppNotification(
+            `Token approval confirmed for pool ${poolAddress}`,
             "success"
           );
-          setIsLoading(false);
-          return true;
-        } else {
-          addAppNotification("Repay transaction failed", "error");
-          setIsLoading(false);
-          return false;
         }
-      } catch (gasError) {
-        console.error("Gas estimation or transaction failed:", gasError);
 
-        // Try to extract revert reason
-        let revertReason = "Unknown error";
-        if (gasError.reason) {
-          revertReason = gasError.reason;
-        } else if (gasError.message.includes("execution reverted")) {
-          const match = gasError.message.match(/execution reverted: (.+)/);
-          if (match) {
-            revertReason = match[1];
+        // Process each unpaid debt
+        for (const { debt, index } of unpaidDebtsWithIndices) {
+          if (remainingBalanceWei.eq(0)) {
+            addAppNotification(
+              "Insufficient balance to repay remaining debts",
+              "error"
+            );
+            allSuccessful = false;
+            break;
+          }
+
+          const debtAmountWei = debt.amount;
+          const repayAmountWei = remainingBalanceWei.lt(debtAmountWei)
+            ? remainingBalanceWei
+            : debtAmountWei;
+
+          if (repayAmountWei.eq(0)) {
+            addAppNotification(
+              `Zero repayment amount for debt index ${index} in pool ${poolAddress}`,
+              "error"
+            );
+            allSuccessful = false;
+            continue;
+          }
+
+          // Estimate gas
+          let gasEstimate;
+          try {
+            gasEstimate = await poolContract.estimateGas.repayDebt(
+              index,
+              repayAmountWei
+            );
+            console.log(
+              `Gas estimate for repayDebt in pool ${poolAddress}:`,
+              gasEstimate.toString()
+            );
+          } catch (gasError) {
+            console.error(
+              `Gas estimation failed for pool ${poolAddress}, debt ${index}:`,
+              gasError
+            );
+            addAppNotification(
+              `Gas estimation failed for debt ${index} in pool ${poolAddress}`,
+              "error"
+            );
+            allSuccessful = false;
+            continue;
+          }
+
+          // Execute repayment
+          try {
+            const gasLimit = gasEstimate.mul(120).div(100); // 20% buffer
+            addAppNotification(
+              `Initiating repayment for debt ${index} in pool ${poolAddress}...`,
+              "info"
+            );
+            const repayTx = await poolContract.repayDebt(
+              index,
+              repayAmountWei,
+              {
+                gasLimit,
+              }
+            );
+
+            addAppNotification(
+              `Repay transaction sent for debt ${index} in pool ${poolAddress}. Hash: ${repayTx.hash.substring(
+                0,
+                10
+              )}...`,
+              "info"
+            );
+
+            const receipt = await repayTx.wait();
+
+            if (receipt.status === 1) {
+              const formattedAmount = ethers.utils.formatUnits(
+                repayAmountWei,
+                stakingTokenInfo?.decimals || 18
+              );
+              addAppNotification(
+                `Successfully repaid ${formattedAmount} tokens for debt ${index} in pool ${poolAddress}`,
+                "success"
+              );
+              remainingBalanceWei = remainingBalanceWei.sub(repayAmountWei);
+            } else {
+              addAppNotification(
+                `Repay transaction failed for debt ${index} in pool ${poolAddress}`,
+                "error"
+              );
+              allSuccessful = false;
+            }
+          } catch (txError) {
+            console.error(
+              `Repayment failed for debt ${index} in pool ${poolAddress}:`,
+              txError
+            );
+            let errorMessage = `Repayment failed for debt ${index} in pool ${poolAddress}`;
+            if (txError.reason) {
+              errorMessage = `${errorMessage}: ${txError.reason}`;
+            } else if (txError.message.includes("rejected")) {
+              errorMessage = `Transaction rejected by user for debt ${index} in pool ${poolAddress}`;
+            } else if (txError.message.includes("reverted")) {
+              const match = txError.message.match(/execution reverted: (.+)/);
+              errorMessage = match
+                ? `${errorMessage}: ${match[1]}`
+                : `${errorMessage}: Transaction reverted`;
+            }
+            addAppNotification(errorMessage, "error");
+            allSuccessful = false;
           }
         }
-
-        addAppNotification(`Repayment failed: ${revertReason}`, "error");
-        setIsLoading(false);
-        return false;
       }
-    } catch (error: any) {
-      console.error("Repay payment error:", error);
-      let errorMessage = "Repay payment failed";
 
-      // Enhanced error handling
-      if (error.code === "INSUFFICIENT_FUNDS") {
+      setIsLoading(false);
+      if (allSuccessful) {
+        addAppNotification("All unpaid debts successfully repaid!", "success");
+      } else {
+        addAppNotification(
+          "Some debt repayments failed. Please check notifications for details.",
+          "error"
+        );
+      }
+      return allSuccessful;
+    } catch (error) {
+      console.error("Repay all debts error:", error);
+      let errorMessage = "Failed to process debt repayments";
+      if (error.code === "INSUFFICIENT") {
         errorMessage = "Insufficient funds for transaction";
       } else if (error.code === "UNPREDICTABLE_GAS_LIMIT") {
-        errorMessage =
-          "Transaction may fail - check debt status and pool state";
-      } else if (error.message.includes("insufficient allowance")) {
-        errorMessage = "Insufficient token allowance";
-      } else if (error.message.includes("user rejected")) {
+        errorMessage = "Transaction may fail - check contract state";
+      } else if (error.message.includes("rejected")) {
         errorMessage = "Transaction rejected by user";
-      } else if (error.message.includes("invalid debt index")) {
-        errorMessage = "Invalid debt index";
-      } else if (error.message.includes("debt already repaid")) {
-        errorMessage = "Debt already repaid";
-      } else if (error.message.includes("amount exceeds debt")) {
-        errorMessage = "Repayment amount exceeds debt";
-      } else if (error.message.includes("pool is not active")) {
-        errorMessage = "Pool is not active";
       } else if (error.reason) {
-        errorMessage = `Transaction failed: ${error.reason}`;
+        errorMessage = `Transaction error: ${error.reason}`;
       }
 
       addAppNotification(errorMessage, "error");
       setIsLoading(false);
       return false;
     }
-  };
+  }, [
+    signer,
+    address,
+    getTokenBalance,
+    stakingTokenInfo,
+    fetchBlockchainPools,
+    getLiquidityPoolContract,
+    getTokenAllowance,
+    approveToken,
+    addAppNotification,
+  ]);
 
   const fallbackPayWithCrossPools = useCallback(
     async (

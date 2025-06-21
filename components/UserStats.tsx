@@ -1,35 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import { UserAccount, LiquidityPoolData } from '../types';
-import { useStateContext } from '../BlockchainContext';
-import { 
-  DollarSignIcon, 
-  UsersIcon, 
-  ShieldIcon, 
+import React, { useState, useEffect } from "react";
+import { UserAccount, LiquidityPoolData } from "../types";
+import { useStateContext } from "../BlockchainContext";
+import {
+  DollarSignIcon,
+  UsersIcon,
+  ShieldIcon,
   AlertTriangleIcon,
   TrendingUpIcon,
-  InfoIcon 
-} from './icons/PhosphorIcons';
+  InfoIcon,
+} from "./icons/PhosphorIcons";
 
 interface UserStatsProps {
   user: UserAccount;
   pools: LiquidityPoolData[];
+  onRepayDebt: () => void;
 }
 
-const UserStats: React.FC<UserStatsProps> = ({ user, pools }) => {
-  const { 
-    getTotalCollateralAcrossPools, 
-    getAllUserPools,
-    getRelatedPools 
-  } = useStateContext();
-  
+const UserStats: React.FC<UserStatsProps> = ({ user, pools, onRepayDebt }) => {
+  const { getTotalCollateralAcrossPools, getAllUserPools, getRelatedPools } =
+    useStateContext();
+
   const [crossPoolData, setCrossPoolData] = useState<{
     totalCollateral: string;
     userPools: string[];
     relatedPools: { [key: string]: string[] };
   }>({
-    totalCollateral: '0',
+    totalCollateral: "0",
     userPools: [],
-    relatedPools: {}
+    relatedPools: {},
   });
 
   useEffect(() => {
@@ -37,43 +35,55 @@ const UserStats: React.FC<UserStatsProps> = ({ user, pools }) => {
       if (getTotalCollateralAcrossPools && getAllUserPools && getRelatedPools) {
         const totalCollateral = await getTotalCollateralAcrossPools();
         const userPools = await getAllUserPools();
-        
+
         // Get related pools for each user pool
         const relatedPools: { [key: string]: string[] } = {};
         for (const poolAddress of userPools) {
           const related = await getRelatedPools(poolAddress);
           relatedPools[poolAddress] = related;
         }
-        
+
         setCrossPoolData({
           totalCollateral,
           userPools,
-          relatedPools
+          relatedPools,
         });
       }
     };
-    
+
     loadCrossPoolData();
-  }, [user, pools, getTotalCollateralAcrossPools, getAllUserPools, getRelatedPools]);
+  }, [
+    user,
+    pools,
+    getTotalCollateralAcrossPools,
+    getAllUserPools,
+    getRelatedPools,
+  ]);
 
   // Calculate user's total stats across all pools
-  const userStats = pools.reduce((acc, pool) => {
-    const userStake = pool.stakers.find(s => s.userId === user.id);
-    if (userStake) {
-      acc.totalStaked += userStake.stakedAmount;
-      acc.totalCollateral += userStake.collateralAmount;
-      acc.activePools += 1;
+  const userStats = pools.reduce(
+    (acc, pool) => {
+      const userStake = pool.stakers.find((s) => s.userId === user.id);
+      if (userStake) {
+        acc.totalStaked += userStake.stakedAmount;
+        acc.totalCollateral += userStake.collateralAmount;
+        acc.activePools += 1;
+      }
+      acc.totalDebt += pool.userDebt;
+      return acc;
+    },
+    {
+      totalStaked: 0,
+      totalCollateral: 0,
+      totalDebt: 0,
+      activePools: 0,
     }
-    acc.totalDebt += pool.userDebt;
-    return acc;
-  }, {
-    totalStaked: 0,
-    totalCollateral: 0,
-    totalDebt: 0,
-    activePools: 0
-  });
+  );
 
-  const totalLPTokenValue = Object.values(user.lpTokenBalances).reduce((sum, balance) => sum + balance, 0);
+  const totalLPTokenValue = Object.values(user.lpTokenBalances).reduce(
+    (sum, balance) => sum + balance,
+    0
+  );
 
   return (
     <div className="bg-slate-800 p-6 rounded-xl shadow-2xl">
@@ -81,7 +91,7 @@ const UserStats: React.FC<UserStatsProps> = ({ user, pools }) => {
         <UsersIcon size={28} className="mr-2" />
         Your Portfolio Overview
       </h2>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-slate-700/50 p-4 rounded-lg">
           <div className="flex items-center justify-between mb-2">
@@ -91,7 +101,9 @@ const UserStats: React.FC<UserStatsProps> = ({ user, pools }) => {
           <div className="text-2xl font-bold text-green-400">
             {userStats.totalStaked.toLocaleString()}
           </div>
-          <div className="text-xs text-slate-400">Across {userStats.activePools} pools</div>
+          <div className="text-xs text-slate-400">
+            Across {userStats.activePools} pools
+          </div>
         </div>
 
         <div className="bg-slate-700/50 p-4 rounded-lg">
@@ -128,6 +140,34 @@ const UserStats: React.FC<UserStatsProps> = ({ user, pools }) => {
         </div>
       </div>
 
+      {/* Debt Warning Section with Repay Button */}
+      {userStats.totalDebt > 0 && (
+        <div className="bg-red-900/20 border border-red-700/50 p-4 rounded-lg mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangleIcon
+                size={20}
+                className="text-red-400 flex-shrink-0"
+              />
+              <div>
+                <div className="text-red-400 font-medium">
+                  Outstanding Debt: ${userStats.totalDebt.toLocaleString()}
+                </div>
+                <div className="text-red-300 text-sm">
+                  Repay your debt to maintain good standing and avoid penalties
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={onRepayDebt}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors whitespace-nowrap"
+            >
+              Repay Debt
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Cross-Pool Network Analysis */}
       {crossPoolData.userPools.length > 1 && (
         <div className="bg-slate-700/30 p-4 rounded-lg">
@@ -135,30 +175,41 @@ const UserStats: React.FC<UserStatsProps> = ({ user, pools }) => {
             <InfoIcon size={20} className="mr-2" />
             Cross-Pool Network
           </h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <div className="text-sm font-medium text-slate-300">Active Pools ({crossPoolData.userPools.length})</div>
+              <div className="text-sm font-medium text-slate-300">
+                Active Pools ({crossPoolData.userPools.length})
+              </div>
               <div className="space-y-1 max-h-32 overflow-y-auto">
                 {crossPoolData.userPools.map((poolAddress, index) => {
-                  const pool = pools.find(p => p.id === poolAddress);
-                  const userStake = pool?.stakers.find(s => s.userId === user.id);
+                  const pool = pools.find((p) => p.id === poolAddress);
+                  const userStake = pool?.stakers.find(
+                    (s) => s.userId === user.id
+                  );
                   return (
-                    <div key={poolAddress} className="text-xs bg-slate-600/50 p-2 rounded">
+                    <div
+                      key={poolAddress}
+                      className="text-xs bg-slate-600/50 p-2 rounded"
+                    >
                       <div className="font-medium text-sky-400">
                         {pool?.regionName || `Pool ${index + 1}`}
                       </div>
                       <div className="text-slate-400">
-                        Collateral: {userStake?.collateralAmount.toLocaleString() || 0} tokens
+                        Collateral:{" "}
+                        {userStake?.collateralAmount.toLocaleString() || 0}{" "}
+                        tokens
                       </div>
                     </div>
                   );
                 })}
               </div>
             </div>
-            
+
             <div className="space-y-2">
-              <div className="text-sm font-medium text-slate-300">Liquidity Benefits</div>
+              <div className="text-sm font-medium text-slate-300">
+                Liquidity Benefits
+              </div>
               <div className="space-y-1 text-xs text-slate-400">
                 <div className="flex items-center">
                   <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>

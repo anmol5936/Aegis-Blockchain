@@ -892,9 +892,7 @@ class CreatePoolRequest(BaseModel):
     regionName: str
 
 class RepayDebtRequest(BaseModel):
-    poolId: str
-    amount: str
-    debtIndex: Optional[int] = None  # Make debtIndex optional
+    pass
 
 class InitiatePaymentRequest(BaseModel):
     userId: str
@@ -1017,135 +1015,121 @@ async def repay_debt_endpoint(request: RepayDebtRequest, agent: TransactionRoute
         raise HTTPException(status_code=500, detail="Service unavailable: Blockchain components not initialized")
 
     try:
-        amount_float = float(request.amount)
-        if amount_float <= 0:
-            raise ValueError("Amount must be positive")
-        # Convert to Wei using token decimals
-        amount_wei = int(amount_float * 10 ** agent.token_decimals)
-        pool_id = Web3.to_checksum_address(request.poolId)
-        tx_id = f"repay_{request.poolId}_{time.time()}"
-
-        # Get LiquidityPool contract
-        pool_contract = agent._get_liquidity_pool_contract(pool_id)
-        if not pool_contract:
-            logger.error(f"No valid LiquidityPool found for poolId: {pool_id}")
-            raise HTTPException(status_code=400, detail=f"No valid LiquidityPool found for poolId: {pool_id}")
-
-        # Fetch user debts
-        user_debts = pool_contract.functions.getUserDebts(agent.signer_address).call()
-        logger.info(f"Fetched user debts: {user_debts}")
-
-        # Find unpaid debts
-        unpaid_debts = [(i, debt) for i, debt in enumerate(user_debts) if len(debt) > 4 and not debt[4]]
-        unpaid_indices = [i for i, _ in unpaid_debts]
-        logger.info(f"Unpaid debt indices: {unpaid_indices}")
-
-        if not unpaid_debts:
-            logger.error("No unpaid debts found")
-            raise HTTPException(status_code=400, detail="No unpaid debts found for this user")
-
-        # Determine debt index
-        selected_debt_index = request.debtIndex
-        debt = None
-
-        if selected_debt_index is None:
-            # Automatic debt selection
-            logger.info("No debt index provided, selecting debt automatically")
-            # First, try to find an exact amount match
-            exact_matches = [(i, d) for i, d in unpaid_debts if d[2] == amount_wei]
-            if exact_matches:
-                if len(exact_matches) > 1:
-                    logger.warning(f"Multiple debts match amount {amount_wei}, selecting first one")
-                selected_debt_index, debt = exact_matches[0]
-                logger.info(f"Selected debt index {selected_debt_index} with exact amount match")
-            else:
-                # Select the most recent unpaid debt (highest timestamp)
-                most_recent = max(unpaid_debts, key=lambda x: x[1][3])
-                selected_debt_index, debt = most_recent
-                logger.info(f"Selected most recent debt index {selected_debt_index} with timestamp {debt[3]}")
-        else:
-            # Validate provided debt index
-            if selected_debt_index < 0 or selected_debt_index >= len(user_debts):
-                logger.error(f"Invalid debt index {selected_debt_index}: {len(user_debts)} debts available")
-                raise HTTPException(status_code=400, detail=f"Invalid debt index {selected_debt_index}. Available unpaid debt indices: {unpaid_indices or 'none'}")
-            debt = user_debts[selected_debt_index]
-
-        # Map debt tuple to structured format
-        try:
-            debt_struct = {
-                "user": debt[0],
-                "merchantAddress": debt[1],
-                "amount": debt[2],
-                "timestamp": debt[3],
-                "isRepaid": debt[4]
-            }
-            logger.info(f"Parsed debt at index {selected_debt_index}: {debt_struct}")
-        except IndexError as e:
-            logger.error(f"Debt tuple structure error: {str(e)}")
-            raise HTTPException(status_code=400, detail=f"Invalid debt tuple structure: {str(e)}")
-
-        # Check if debt is already repaid
-        if debt_struct["isRepaid"]:
-            logger.error(f"Debt at index {selected_debt_index} already repaid")
-            raise HTTPException(status_code=400, detail=f"Debt at index {selected_debt_index} is already repaid. Available unpaid debt indices: {unpaid_indices or 'none'}")
-
-        # Validate repayment amount
-        if amount_wei > debt_struct["amount"]:
-            logger.error(f"Repayment amount {amount_wei} exceeds debt {debt_struct['amount']}")
-            debt_amount_tokens = debt_struct["amount"] / (10 ** agent.token_decimals)
-            raise HTTPException(status_code=400, detail=f"Repayment amount {request.amount} tokens exceeds debt {debt_amount_tokens} tokens")
+        tx_id = f"repay_all_{time.time()}"
 
         # Check user token balance
         user_balance = agent.staking_token_contract.functions.balanceOf(agent.signer_address).call()
-        logger.info(f"User balance: {user_balance} wei ({user_balance / (10 ** agent.token_decimals)} tokens)")
-        if user_balance < amount_wei:
-            logger.error(f"Insufficient token balance {user_balance} for repayment {amount_wei}")
+        logger.info(f"User balance: {user_balance / (10 ** agent.token_decimals)} tokens")
+        if user_balance == 0:
+            logger.error(f"Insufficient token balance for {tx_id}")
             raise HTTPException(status_code=400, detail="Insufficient token balance for repayment")
 
-        # Check and handle token approval
-        current_allowance = agent.staking_token_contract.functions.allowance(agent.signer_address, pool_id).call()
-        logger.info(f"Current allowance: {current_allowance} wei ({current_allowance / (10 ** agent.token_decimals)} tokens)")
-        if current_allowance < amount_wei:
-            logger.info(f"Insufficient allowance {current_allowance} for {tx_id}, approving tokens")
-            approve_tx_hash = agent._approve_tokens(pool_id, amount_wei, tx_id)
-            if approve_tx_hash is None:
-                logger.error(f"Failed to approve tokens for {tx_id}")
-                raise HTTPException(status_code=500, detail="Failed to approve tokens for repayment")
-            if approve_tx_hash != "0x0":
-                logger.info(f"Approval successful for {tx_id}: {approve_tx_hash}")
-                # Wait for approval transaction to be mined
-                receipt = agent.w3.eth.wait_for_transaction_receipt(agent.w3.to_bytes(hexstr=approve_tx_hash), timeout=120)
-                if receipt.status != 1:
-                    logger.error(f"Approval transaction failed for {tx_id}: {receipt}")
-                    raise HTTPException(status_code=500, detail="Approval transaction failed")
+        # Fetch all pools from PoolFactory
+        pool_addresses = agent.pool_factory_contract.functions.getPools().call()
+        logger.info(f"Fetched pool addresses: {pool_addresses}")
+        if not pool_addresses:
+            logger.info("No pools found")
+            return {"transaction_hashes": [], "status": "success", "message": "No debts to repay"}
 
-        # Estimate gas
-        tx = pool_contract.functions.repayDebt(selected_debt_index, amount_wei).build_transaction({
-            'from': agent.signer_address,
-            'nonce': agent.w3.eth.get_transaction_count(agent.signer_address),
-            'gasPrice': agent.w3.eth.gas_price,
-        })
-        gas_estimate = agent.w3.eth.estimate_gas(tx)
-        tx['gas'] = int(gas_estimate * 1.2)  # 20% buffer
-        logger.debug(f"Gas estimate for {tx_id}: {gas_estimate}, using {tx['gas']} with gas price {agent.w3.from_wei(tx['gasPrice'], 'gwei')} Gwei")
+        total_debt_wei = 0
+        pool_debts = {}
+        for pool_id in pool_addresses:
+            pool_id = Web3.to_checksum_address(pool_id)
+            pool_contract = agent._get_liquidity_pool_contract(pool_id)
+            if not pool_contract:
+                logger.warning(f"Skipping invalid pool {pool_id}")
+                continue
 
-        # Sign and send transaction
-        signed_tx = agent.w3.eth.account.sign_transaction(tx, private_key=agent.signer_private_key)
-        tx_hash = agent.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
-        logger.info(f"Repay transaction sent for {tx_id}: {tx_hash.hex()}")
+            # Fetch user debts for the pool
+            user_debts = pool_contract.functions.getUserDebts(agent.signer_address).call()
+            unpaid_debts = [(i, debt) for i, debt in enumerate(user_debts) if len(debt) > 4 and not debt[4]]
+            if unpaid_debts:
+                pool_debts[pool_id] = unpaid_debts
+                total_debt_wei += sum(debt[2] for _, debt in unpaid_debts)
+                logger.info(f"Pool {pool_id} has {len(unpaid_debts)} unpaid debts")
 
-        # Wait for confirmation
-        receipt = agent.w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
-        if receipt.status == 1:
-            logger.info(f"Repay transaction confirmed for {tx_id}: {tx_hash.hex()}")
-            return {
-                "transaction_hash": tx_hash.hex(),
-                "status": "success",
-                "selected_debt_index": selected_debt_index
-            }
-        else:
-            logger.error(f"Repay transaction failed for {tx_id}: {tx}")
-            raise HTTPException(status_code=500, detail="Failed to repay debt")
+        if not pool_debts:
+            logger.info("No unpaid debts found across all pools")
+            return {"transaction_hashes": [], "status": "success", "message": "No debts to repay"}
+
+        if user_balance < total_debt_wei:
+            logger.error(f"Insufficient balance {user_balance} for total debt {total_debt_wei}")
+            raise HTTPException(status_code=400, detail="Insufficient token balance to cover all debts")
+
+        # Approve tokens for each pool with unpaid debts
+        approval_hashes = []
+        for pool_id in pool_debts:
+            current_allowance = agent.staking_token_contract.functions.allowance(agent.signer_address, pool_id).call()
+            pool_debt_wei = sum(debt[2] for _, debt in pool_debts[pool_id])
+            if current_allowance < pool_debt_wei:
+                logger.info(f"Approving {pool_debt_wei / (10 ** agent.token_decimals)} tokens for pool {pool_id}")
+                approve_tx_hash = agent._approve_tokens(pool_id, pool_debt_wei, f"approve_{pool_id}_{tx_id}")
+                if approve_tx_hash is None:
+                    logger.error(f"Failed to approve tokens for pool {pool_id}")
+                    raise HTTPException(status_code=500, detail=f"Failed to approve tokens for pool {pool_id}")
+                if approve_tx_hash != "0x0":
+                    logger.info(f"Approval successful for pool {pool_id}: {approve_tx_hash}")
+                    approval_hashes.append(approve_tx_hash)
+                    receipt = agent.w3.eth.wait_for_transaction_receipt(agent.w3.to_bytes(hexstr=approve_tx_hash), timeout=120)
+                    if receipt.status != 1:
+                        logger.error(f"Approval transaction failed for pool {pool_id}: {receipt}")
+                        raise HTTPException(status_code=500, detail=f"Approval transaction failed for pool {pool_id}")
+
+        # Call repayOnChain on PoolFactory (assuming it exists)
+        # If repayOnChain is on LiquidityPool, iterate through pools and call repayDebt for each debt
+        transaction_hashes = []
+        all_successful = True
+        for pool_id, unpaid_debts in pool_debts.items():
+            pool_contract = agent._get_liquidity_pool_contract(pool_id)
+            if not pool_contract:
+                logger.error(f"Failed to get pool contract for {pool_id}")
+                all_successful = False
+                continue
+
+            for debt_index, debt in unpaid_debts:
+                debt_amount_wei = debt[2]
+                try:
+                    # Build transaction for repayDebt (since repayOnChain is not in Solidity contract)
+                    tx = pool_contract.functions.repayDebt(debt_index, debt_amount_wei).build_transaction({
+                        'from': agent.signer_address,
+                        'nonce': agent.w3.eth.get_transaction_count(agent.signer_address),
+                        'gasPrice': agent.w3.eth.gas_price,
+                    })
+                    gas_estimate = agent.w3.eth.estimate_gas(tx)
+                    tx['gas'] = int(gas_estimate * 1.2)
+                    logger.debug(f"Gas estimate for {tx_id} in pool {pool_id}: {gas_estimate}, using {tx['gas']}")
+
+                    # Sign and send transaction
+                    signed_tx = agent.w3.eth.account.sign_transaction(tx, private_key=agent.signer_private_key)
+                    tx_hash = agent.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+                    logger.info(f"Repay transaction sent for debt {debt_index} in pool {pool_id}: {tx_hash.hex()}")
+
+                    # Wait for confirmation
+                    receipt = agent.w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
+                    if receipt.status == 1:
+                        logger.info(f"Repay transaction confirmed for debt {debt_index} in pool {pool_id}: {tx_hash.hex()}")
+                        transaction_hashes.append(tx_hash.hex())
+                    else:
+                        logger.error(f"Repay transaction failed for debt {debt_index} in pool {pool_id}: {receipt}")
+                        all_successful = False
+                except Exception as e:
+                    logger.error(f"Repay transaction failed for debt {debt_index} in pool {pool_id}: {e}")
+                    all_successful = False
+
+        if not transaction_hashes:
+            logger.error("No repayment transactions were successful")
+            raise HTTPException(status_code=500, detail="No repayment transactions were successful")
+
+        status = "success" if all_successful else "partial_success"
+        message = "All debts repaid successfully" if all_successful else "Some debt repayments failed"
+        logger.info(f"Repay operation completed with status: {status}")
+        return {
+            "transaction_hashes": transaction_hashes,
+            "approval_hashes": approval_hashes,
+            "status": status,
+            "message": message
+        }
+
     except ValueError as e:
         logger.error(f"Invalid input for repay debt request: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=f"Invalid input: {str(e)}")
@@ -1155,13 +1139,13 @@ async def repay_debt_endpoint(request: RepayDebtRequest, agent: TransactionRoute
         if "insufficient funds" in error_message:
             error_message = "Insufficient funds for transaction"
         elif "execution reverted" in error_message:
-            error_message = "Transaction reverted - check pool status and debt"
+            error_message = "Transaction reverted - check pool status and balance"
         elif "insufficient allowance" in error_message:
             error_message = "Insufficient token allowance"
         elif "invalid address" in error_message:
             error_message = "Invalid address provided"
         else:
-            error_message = f"Failed to repay debt: {str(e)}"
+            error_message = f"Failed to repay debts: {str(e)}"
         raise HTTPException(status_code=500, detail=error_message)
 
 @app.post("/fallbackPay")

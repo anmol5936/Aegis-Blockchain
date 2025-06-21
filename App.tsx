@@ -52,6 +52,7 @@ const App: React.FC = () => {
     getTotalCollateralAcrossPools, // New function
     getAllUserPools, // New function
     getRelatedPools,
+    getLiquidityPoolContract,
     repayOnChain,
   } = useStateContext();
 
@@ -257,6 +258,11 @@ const App: React.FC = () => {
     }
   };
 
+  // New handler function for repaying debt from portfolio overview
+  const repayMYdebt = () => {
+    // Empty handler function as requested
+  };
+
   const handleDistributeRewards = useCallback(async () => {
     if (!address) {
       addAppNotification("Please connect your wallet.", "error");
@@ -372,7 +378,13 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {currentUserData && <UserStats user={currentUserData} pools={pools} />}
+        {currentUserData && (
+          <UserStats
+            user={currentUserData}
+            pools={pools}
+            onRepayDebt={repayOnChain}
+          />
+        )}
 
         {address && ( // Show controls for any connected user
           <div className="bg-slate-800 p-6 rounded-xl shadow-2xl">
