@@ -76,6 +76,18 @@ function RenderPayment() {
       apiName: "ICICI Bank",
     },
     { id: "axis", name: "Axis Bank", icon: "/axis.svg", apiName: "Axis Bank" },
+    {
+      id: "hdfc",
+      name: "HDFC Bank",
+      icon: "/hdfc.svg", // Assuming a generic icon path
+      apiName: "HDFC Bank",
+    },
+    {
+      id: "kotak",
+      name: "Kotak Mahindra Bank",
+      icon: "/kotak.svg", // Assuming a generic icon path
+      apiName: "Kotak Mahindra Bank",
+    },
   ];
 
   const aegisSteps = [
@@ -158,6 +170,20 @@ function RenderPayment() {
         status: "error",
       });
       console.log("Geolocation not supported by browser.");
+    }
+  };
+
+  const initiatePaymentProcessing = async (method: string, bankId?: string) => {
+    const selectedBankName = bankId ? banks.find((b) => b.id === bankId)?.name : "your selected method";
+    const confirmationMessage = `You are about to pay ${formatPrice(totalValue)} using ${selectedBankName}. Proceed?`;
+
+    if (window.confirm(confirmationMessage)) {
+      await handlePayment(method, bankId);
+    } else {
+      console.log("Payment cancelled by user.");
+      // Optionally reset any state if needed, e.g., selected payment method
+      setSelectedPaymentMethod("");
+      setSelectedBank("");
     }
   };
 
@@ -381,7 +407,8 @@ function RenderPayment() {
   const handleBankSelection = (bankId: string) => {
     setSelectedBank(bankId);
     setShowBankDropdown(false);
-    handlePayment("netbanking", bankId);
+    // Call initiatePaymentProcessing instead of handlePayment directly
+    initiatePaymentProcessing("netbanking", bankId);
   };
 
   return (
@@ -557,7 +584,7 @@ function RenderPayment() {
                     </div>
                   ) : (
                     <button
-                      onClick={() => handlePayment(method.id)}
+                      onClick={() => initiatePaymentProcessing(method.id)} // Changed to initiatePaymentProcessing
                       className="w-full flex items-center p-4 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-colors text-left"
                     >
                       {method.type === "image" ? (
