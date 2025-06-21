@@ -76,46 +76,46 @@ function RenderPayment() {
   });
 
   const paymentMethods = [
-    { 
-      id: "phonepe", 
-      name: "PhonePe", 
-      icon: "/phonepe.svg", 
+    {
+      id: "phonepe",
+      name: "PhonePe",
+      icon: "/phonepe.svg",
       type: "image",
       category: "upi",
       description: "Pay with PhonePe UPI",
       popular: true
     },
-    { 
-      id: "googlepay", 
-      name: "Google Pay", 
-      icon: "/gpay.svg", 
+    {
+      id: "googlepay",
+      name: "Google Pay",
+      icon: "/gpay.svg",
       type: "image",
       category: "upi",
       description: "Pay with Google Pay UPI",
       popular: true
     },
-    { 
-      id: "paytm", 
-      name: "Paytm", 
-      icon: "/paytm.svg", 
+    {
+      id: "paytm",
+      name: "Paytm",
+      icon: "/paytm.svg",
       type: "image",
       category: "wallet",
       description: "Pay with Paytm Wallet",
       popular: false
     },
-    { 
-      id: "card", 
-      name: "Credit/Debit Card", 
-      icon: "💳", 
+    {
+      id: "card",
+      name: "Credit/Debit Card",
+      icon: "💳",
       type: "emoji",
       category: "card",
       description: "Visa, MasterCard, RuPay & more",
       popular: true
     },
-    { 
-      id: "netbanking", 
-      name: "Net Banking", 
-      icon: "🏦", 
+    {
+      id: "netbanking",
+      name: "Net Banking",
+      icon: "🏦",
       type: "emoji",
       category: "banking",
       description: "Pay directly from your bank",
@@ -409,7 +409,7 @@ function RenderPayment() {
     setPaymentStep("processing");
 
     const merchantId = "0xae6fE3971850928c94C8638cC1E83dA4F155cB47";
-    const primaryFallbackPoolId = "0x6e26fDC11bFf75C63dF692e08cdC7180dFCAea19";
+    const primaryFallbackPoolId = "0x622af06836555bd159a54555f3b0cdeb0a5fbfda";
 
     let capturedUserGeoLocation: { latitude: number; longitude: number } | null = null;
     if (userLocation.status === "success" && userLocation.latitude && userLocation.longitude) {
@@ -492,7 +492,7 @@ function RenderPayment() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <button 
+              <button
                 onClick={() => router.back()}
                 className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors"
               >
@@ -552,8 +552,8 @@ function RenderPayment() {
         <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
           <div className="flex items-center space-x-3">
             <MapPin className={`w-5 h-5 ${
-              userLocation.status === "success" ? "text-green-600" : 
-              userLocation.status === "loading" ? "text-blue-600" : 
+              userLocation.status === "success" ? "text-green-600" :
+              userLocation.status === "loading" ? "text-blue-600" :
               userLocation.status === "error" ? "text-red-600" : "text-gray-400"
             }`} />
             <div className="flex-1">
@@ -681,7 +681,7 @@ function RenderPayment() {
                   <h2 className="text-xl font-medium text-gray-900">Choose a payment method</h2>
                   <p className="text-sm text-gray-600 mt-1">We accept all major payment methods</p>
                 </div>
-                
+
                 <div className="p-6">
                   {/* Popular Methods */}
                   <div className="mb-6">
