@@ -4,7 +4,7 @@ import {
   UserAccount,
   PoolStatus,
   AppNotification as AppNotificationType,
-} from "./types"; // Renamed AppNotification to AppNotificationType
+} from "./types";
 import {
   COLLATERAL_PERCENTAGE,
   FALLBACK_CAP_PER_USER_PER_POOL,
