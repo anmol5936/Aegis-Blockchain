@@ -58,7 +58,7 @@ class UserSimulator {
     updateDisplay(userData) {
         this.displayName.textContent = userData.name || '-';
         this.displayBalance.textContent = userData.accountBalance ?
-            `₹${userData.accountBalance.toLocaleString()}` : '-';
+            `₹{userData.accountBalance.toLocaleString()}` : '-';
         this.displayPaymentMode.textContent = userData.paymentMode || '-';
         this.displayBank.textContent = userData.bank || '-';
         this.displayLastUpdated.textContent = userData.lastUpdated ?

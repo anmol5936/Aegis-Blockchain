@@ -5,160 +5,168 @@
 }
 
 body {
-    font-family: Arial, sans-serif; /* Standard sans-serif font */
-    background-color: #F0F2F2; /* Amazon-like light grey background */
+    font-family: 'Amazon Ember', 'Helvetica Neue', Arial, sans-serif; /* Amazon's font stack */
+    background: linear-gradient(to bottom, #F4F6F6, #EAEDED); /* Subtle gradient for depth */
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem; /* Add some padding for smaller screens */
+    padding: 1rem;
 }
 
 .container {
-    background-color: transparent; /* Container itself is transparent */
-    border-radius: 8px; /* Standard Amazon radius */
-    padding: 2rem;
-    /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); */ /* Optional: softer shadow if needed */
+    background-color: #FFFFFF; /* White container */
+    border-radius: 12px; /* Modern Amazon radius */
+    padding: 2.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     text-align: center;
     width: 100%;
-    max-width: 960px; /* Max width for content */
+    max-width: 1000px;
+    border-top: 4px solid #232F3E; /* Dark blue accent */
 }
 
 h1 {
-    color: #0F1111; /* Amazon dark text */
-    margin-bottom: 2rem;
-    font-size: 2rem; /* Slightly reduced */
-    font-weight: 500; /* Medium weight */
+    color: #232F3E; /* Amazon dark blue */
+    margin-bottom: 2.5rem;
+    font-size: 2.2rem;
+    font-weight: 400;
+    letter-spacing: 0.5px;
 }
 
 .banks-section {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
-    margin-top: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
 }
 
 .bank-card {
-    background: #FFFFFF; /* White background for cards */
-    border-radius: 8px; /* Standard Amazon radius */
-    padding: 1.5rem;
-    border: 1px solid #DDD; /* Amazon-like border */
+    background: #FAFAFA; /* Subtle off-white for cards */
+    border-radius: 10px;
+    padding: 1.75rem;
+    border: 1px solid #E7E7E7;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
 .bank-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1); /* Softer hover shadow */
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+    border-left: 3px solid #FFD814; /* Yellow accent on hover */
 }
 
 .bank-name {
-    color: #0F1111; /* Dark text */
-    margin-bottom: 1rem;
-    font-size: 1.25rem; /* Slightly reduced */
+    color: #232F3E; /* Dark blue */
+    margin-bottom: 1.25rem;
+    font-size: 1.4rem;
     font-weight: 500;
-}
-
-.status-section {
-    margin-bottom: 2rem;
+    letter-spacing: 0.2px;
 }
 
 .status-indicator {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.8rem;
-    padding: 0.75rem; /* Slightly reduced padding */
-    border-radius: 6px; /* Standard radius */
-    background: #f8f8f8; /* Light grey for status area within card */
-    border: 1px solid #e0e0e0;
-    margin-bottom: 1rem;
+    gap: 0.75rem;
+    padding: 0.8rem;
+    border-radius: 8px;
+    background: #F7F8FA;
+    border: 1px solid #DDE2E5;
+    margin-bottom: 1.25rem;
 }
 
 .status-light {
-    width: 12px; /* Slightly smaller */
-    height: 12px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
-    background: #D32F2F; /* Darker Red for inactive */
-    /* box-shadow: 0 0 6px rgba(220, 53, 69, 0.4); */ /* Removing shadow for flatter look */
+    background: #C92127; /* Red for inactive */
     transition: background-color 0.3s ease;
 }
 
 .status-light.active {
-    background: #388E3C; /* Darker Green for active */
-    /* box-shadow: 0 0 6px rgba(40, 167, 69, 0.4); */ /* Removing shadow */
+    background: #007600; /* Green for active */
 }
 
 .status-text {
-    font-size: 0.9rem; /* Slightly smaller */
+    font-size: 0.95rem;
     font-weight: 500;
-    color: #D32F2F; /* Darker Red for inactive text */
+    color: #C92127; /* Red for inactive */
     transition: color 0.3s ease;
+    text-transform: uppercase;
 }
 
 .status-text.active {
-    color: #388E3C; /* Darker Green for active text */
+    color: #007600; /* Green for active */
 }
 
 .toggle-btn {
-    background-color: #febd69; /* Amazon Yellow */
-    color: #0F1111; /* Dark text for yellow button */
-    border: 1px solid #b08500; /* Darker yellow border for definition */
-    padding: 0.7rem 1.3rem; /* Adjusted padding */
-    font-size: 0.9rem;
-    font-weight: 500; /* Normal weight for Amazon style buttons */
-    border-radius: 6px; /* Standard Amazon radius */
+    background: linear-gradient(to bottom, #FFD814, #F7C107); /* Amazon yellow gradient */
+    color: #232F3E; /* Dark blue text */
+    border: 1px solid #F7C107;
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
-    /* box-shadow: 0 1px 2px rgba(0,0,0,0.05); */ /* Subtle shadow, optional */
-    min-width: 120px;
-    line-height: 1.5; /* Ensure text is centered well */
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    min-width: 130px;
+    line-height: 1.4;
+    text-transform: capitalize;
 }
 
 .toggle-btn:hover {
-    background-color: #f7b054; /* Slightly darker yellow on hover */
-    border-color: #a07400;
+    background: linear-gradient(to bottom, #F7C107, #E0A800); /* Darker yellow */
+    border-color: #E0A800;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .toggle-btn:active {
-    background-color: #e0a800; /* Even darker on active */
-    border-color: #916800;
+    background: linear-gradient(to bottom, #E0A800, #D69E00);
+    border-color: #D69E00;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .toggle-btn.stop {
-    background-color: #adb5bd; /* Amazon secondary/grey button */
-    color: #0F1111;
-    border-color: #8a9195; /* Border for grey button */
+    background: linear-gradient(to bottom, #232F3E, #1A252F); /* Dark blue gradient */
+    color: #FFFFFF; /* White text for contrast */
+    border-color: #1A252F;
 }
 
 .toggle-btn.stop:hover {
-    background-color: #9fa6ad;
-    border-color: #7c8389;
+    background: linear-gradient(to bottom, #1A252F, #131C26);
+    border-color: #131C26;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .toggle-btn.stop:active {
-    background-color: #818a91;
-    border-color: #6c757d;
+    background: linear-gradient(to bottom, #131C26, #0D151B);
+    border-color: #0D151B;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
     .container {
-        min-width: 320px;
+        min-width: 300px;
         margin: 1rem;
-        padding: 1.5rem;
+        padding: 1.75rem;
     }
 
     .banks-section {
         grid-template-columns: 1fr;
-        gap: 1.5rem;
+        gap: 1.25rem;
     }
 
     h1 {
-        font-size: 2rem;
+        font-size: 1.8rem;
     }
 
     .bank-name {
         font-size: 1.3rem;
+    }
+
+    .toggle-btn {
+        padding: 0.7rem 1.2rem;
+        font-size: 0.95rem;
     }
 }

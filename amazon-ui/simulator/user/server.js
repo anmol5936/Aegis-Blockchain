@@ -92,7 +92,7 @@ app.listen(PORT, () => {
     console.log(`👤 User Simulator Server running on http://localhost:${PORT}`);
     console.log(`📊 Current User Data:`);
     console.log(`   Name: ${userData.name}`);
-    console.log(`   Balance: $${userData.accountBalance.toLocaleString()}`);
+    console.log(`   Balance: ₹${userData.accountBalance.toLocaleString()}`);
     console.log(`   Payment Mode: ${userData.paymentMode}`);
     console.log(`   Bank: ${userData.bank}`);
     console.log('🔗 API Endpoints:');
