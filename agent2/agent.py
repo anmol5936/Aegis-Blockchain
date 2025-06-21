@@ -10,9 +10,14 @@ from confluent_kafka import Producer, Consumer, KafkaError
 from dotenv import load_dotenv
 from web3 import Web3, HTTPProvider
 from web3.contract import Contract # Not directly used, can be removed if Contract type hint not needed
-from typing import Dict, Optional # Keep Optional, Dict
+from typing import Dict, Optional , List, Any # Keep Optional, Dict
+import httpx
+from pydantic import BaseModel
 
 load_dotenv()
+
+class DistributedStakeRequest(BaseModel):
+    amount: str  
 
 # Environment variables
 AGENT3_API_URL = os.getenv('AGENT3_API_URL', 'http://localhost:8001')
@@ -985,6 +990,159 @@ async def stake_in_pool_endpoint(request: StakeRequest, agent: TransactionRouter
     except Exception as e:
         logger.error(f"Stake transaction failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Stake transaction failed: {str(e)}")
+
+
+@app.post("/stakeInPoolDistributed")
+async def stake_in_pool_distributed_endpoint(
+    request: DistributedStakeRequest, 
+    agent: TransactionRouterRecoveryAgent = Depends(get_agent)
+):
+    """
+    Distribute stake amount across all pools inversely proportional to their liquidity.
+    Pools with lower liquidity get more stake.
+    """
+    logger.info(f"Received distributed stake request: {request.dict()}")
+    
+    if not agent.staking_token_contract or not agent.w3:
+        logger.error("Web3 or staking token contract not initialized")
+        raise HTTPException(status_code=500, detail="Service unavailable: Blockchain components not initialized")
+
+    try:
+        total_amount = float(request.amount)
+        
+        # Get all pools data
+        pools_data = await get_all_pools()
+        if not pools_data or not pools_data.get('pools'):
+            raise HTTPException(status_code=400, detail="No pools available for staking")
+        
+        pools = pools_data['pools']
+        active_pools = [pool for pool in pools if pool.get('status') == 'ACTIVE']
+        
+        if not active_pools:
+            raise HTTPException(status_code=400, detail="No active pools available for staking")
+        
+        # Calculate distribution amounts
+        distribution = calculate_inverse_liquidity_distribution(active_pools, total_amount)
+        
+        # Execute stakes for each pool
+        results = []
+        failed_stakes = []
+        
+        for pool_id, amount in distribution.items():
+            try:
+                stake_request = StakeRequest(poolId=pool_id, amount=str(amount))
+                result = await stake_in_pool_endpoint(stake_request, agent)
+                results.append({
+                    "poolId": pool_id,
+                    "amount": amount,
+                    "transaction_hash": result["transaction_hash"],
+                    "status": result["status"]
+                })
+                logger.info(f"Successfully staked {amount} in pool {pool_id}")
+                
+            except Exception as e:
+                logger.error(f"Failed to stake in pool {pool_id}: {e}")
+                failed_stakes.append({
+                    "poolId": pool_id,
+                    "amount": amount,
+                    "error": str(e)
+                })
+        
+        response = {
+            "total_amount_distributed": total_amount,
+            "successful_stakes": results,
+            "failed_stakes": failed_stakes,
+            "distribution_strategy": "inverse_liquidity"
+        }
+        
+        if failed_stakes:
+            logger.warning(f"Some stakes failed: {failed_stakes}")
+            response["status"] = "partial_success"
+        else:
+            response["status"] = "success"
+            
+        return response
+        
+    except ValueError as e:
+        logger.error(f"Invalid amount format: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid amount: {e}")
+    except Exception as e:
+        logger.error(f"Distributed stake failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Distributed stake failed: {str(e)}")
+
+async def get_all_pools() -> Dict[str, Any]:
+    """Fetch all pools from the GET /pools endpoint"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get("http://localhost:8765/pools")
+            response.raise_for_status()
+            return response.json()
+    except Exception as e:
+        logger.error(f"Failed to fetch pools: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch pool data")
+
+def calculate_inverse_liquidity_distribution(pools: List[Dict], total_amount: float) -> Dict[str, float]:
+    """
+    Calculate distribution amounts inversely proportional to liquidity.
+    Pools with lower liquidity get higher allocation.
+    """
+    # Extract liquidity values and pool IDs
+    pool_liquidities = {pool['id']: pool['totalLiquidity'] for pool in pools}
+    
+    # Calculate inverse weights
+    # We add a small constant to avoid division by zero and extreme allocations
+    min_liquidity = min(pool_liquidities.values())
+    base_liquidity = max(min_liquidity * 0.1, 1.0)  # Minimum base to prevent extreme ratios
+    
+    inverse_weights = {}
+    for pool_id, liquidity in pool_liquidities.items():
+        # Higher liquidity = lower weight
+        inverse_weights[pool_id] = 1.0 / (liquidity + base_liquidity)
+    
+    # Normalize weights to sum to 1
+    total_weight = sum(inverse_weights.values())
+    normalized_weights = {pool_id: weight / total_weight for pool_id, weight in inverse_weights.items()}
+    
+    # Calculate actual amounts
+    distribution = {}
+    for pool_id, weight in normalized_weights.items():
+        amount = total_amount * weight
+        distribution[pool_id] = round(amount, 6)  # Round to 6 decimal places
+    
+    # Log the distribution for debugging
+    logger.info(f"Distribution calculated: {distribution}")
+    for pool_id, amount in distribution.items():
+        liquidity = pool_liquidities[pool_id]
+        logger.info(f"Pool {pool_id}: Liquidity={liquidity}, Allocation={amount}")
+    
+    return distribution
+
+# Alternative implementation with different weighting strategies
+def calculate_inverse_liquidity_distribution_v2(pools: List[Dict], total_amount: float) -> Dict[str, float]:
+    """
+    Alternative distribution strategy using squared inverse for more dramatic differences.
+    """
+    pool_liquidities = {pool['id']: pool['totalLiquidity'] for pool in pools}
+    
+    # Use squared inverse for more dramatic rebalancing
+    max_liquidity = max(pool_liquidities.values())
+    inverse_weights = {}
+    
+    for pool_id, liquidity in pool_liquidities.items():
+        # Normalize liquidity to 0-1 range, then use squared inverse
+        normalized_liquidity = liquidity / max_liquidity
+        inverse_weights[pool_id] = 1.0 / (normalized_liquidity ** 2 + 0.1)  # +0.1 to prevent extreme values
+    
+    # Normalize and calculate amounts
+    total_weight = sum(inverse_weights.values())
+    distribution = {}
+    
+    for pool_id, weight in inverse_weights.items():
+        normalized_weight = weight / total_weight
+        amount = total_amount * normalized_weight
+        distribution[pool_id] = round(amount, 6)
+    
+    return distribution
 
 @app.post("/createPoolOnChain")
 async def create_pool_on_chain_endpoint(request: CreatePoolRequest, agent: TransactionRouterRecoveryAgent = Depends(get_agent)):

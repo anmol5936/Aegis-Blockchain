@@ -1,5 +1,7 @@
-python-dotenv
-requests
-redis
+# Minimal requirements for maximum compatibility
 fastapi
-uvicorn[standard]
+uvicorn
+web3
+redis
+python-dotenv
+pydantic
