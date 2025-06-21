@@ -8,7 +8,8 @@ interface FallbackModalProps {
   user: UserAccount;
   pools: LiquidityPoolData[];
   onClose: () => void;
-  onConfirm: (poolId: string, merchantAddress: string, amount: number) => void;
+  onConfirm: (poolId: string, merchantAddress: string, amount: number, selectedBank: string) => void; // Updated signature
+  isProcessingPayment?: boolean; // New prop
 }
 
 const FallbackModal: React.FC<FallbackModalProps> = ({
@@ -17,13 +18,15 @@ const FallbackModal: React.FC<FallbackModalProps> = ({
   pools,
   onClose,
   onConfirm,
+  isProcessingPayment, // Consumed new prop
 }) => {
   console.log('=== FallbackModal Render Start ===', {
     pool: pool?.id,
     user: user?.id,
     poolsLength: pools?.length,
     onCloseExists: !!onClose,
-    onConfirmExists: !!onConfirm
+    onConfirmExists: !!onConfirm,
+    isProcessingPayment
   });
 
   const { 
@@ -34,9 +37,10 @@ const FallbackModal: React.FC<FallbackModalProps> = ({
   
   const [merchantAddress, setMerchantAddress] = useState('');
   const [amount, setAmount] = useState('');
+  const [selectedBank, setSelectedBank] = useState(''); // New state for selected bank
   const [totalCollateral, setTotalCollateral] = useState<number>(0);
   const [userPools, setUserPools] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // This is for loading collateral data
   const [crossPoolAnalysis, setCrossPoolAnalysis] = useState<{
     primaryPoolCollateral: number;
     additionalPoolsNeeded: boolean;
@@ -46,9 +50,10 @@ const FallbackModal: React.FC<FallbackModalProps> = ({
   console.log('=== Initial State ===', {
     merchantAddress,
     amount,
+    selectedBank, // Added to log
     totalCollateral,
     userPools,
-    isLoading,
+    isLoading, // This is for loading collateral data
     crossPoolAnalysis
   });
 
@@ -168,16 +173,18 @@ const FallbackModal: React.FC<FallbackModalProps> = ({
     amountFloat > totalCollateral;
 
   console.log('=== Execute Button State ===', {
-    isLoading,
+    isLoading: isLoading || !!isProcessingPayment, // Consider both loading states
     merchantAddress: merchantAddress.trim(),
     amount: amount.trim(),
+    selectedBank: selectedBank.trim(), // Added selectedBank
     amountFloat,
     totalCollateral,
-    isExecuteDisabled,
+    isExecuteDisabled: isExecuteDisabled || !!isProcessingPayment, // Disable if processing payment
     reasons: {
-      isLoading,
+      isLoading: isLoading || !!isProcessingPayment,
       noMerchant: !merchantAddress.trim(),
       noAmount: !amount.trim(),
+      noSelectedBank: !selectedBank.trim(), // Added reason for selectedBank
       invalidAmount: isNaN(amountFloat) || amountFloat <= 0,
       exceedsCollateral: amountFloat > totalCollateral
     }
@@ -188,45 +195,53 @@ const FallbackModal: React.FC<FallbackModalProps> = ({
       poolId: pool.id,
       merchantAddress,
       amount,
+      selectedBank, // Added selectedBank
       amountFloat,
       totalCollateral,
-      isExecuteDisabled
+      isExecuteDisabled: isExecuteDisabled || !!isProcessingPayment
     });
     
-    if (isLoading) {
-      console.log('Cannot execute: Loading in progress');
-      addAppNotification('Please wait for data to load', 'error');
+    if (isLoading || isProcessingPayment) { // Check both loading states
+      console.log('Cannot execute: Loading in progress or payment processing');
+      addAppNotification('Please wait for current operation to complete.', 'error');
       return;
     }
 
     if (!merchantAddress.trim()) {
       console.log('Cannot execute: Missing merchant address');
-      addAppNotification('Please enter a merchant address', 'error');
+      addAppNotification('Please enter a merchant address.', 'error');
       return;
     }
     
     if (!amount.trim() || isNaN(amountFloat) || amountFloat <= 0) {
       console.log('Cannot execute: Invalid amount', { amount, amountFloat });
-      addAppNotification('Please enter a valid payment amount', 'error');
+      addAppNotification('Please enter a valid payment amount.', 'error');
+      return;
+    }
+
+    if (!selectedBank.trim()) { // Check for selectedBank
+      console.log('Cannot execute: Missing selected bank');
+      addAppNotification('Please enter or select a bank ID.', 'error');
       return;
     }
     
+    // Collateral check can remain, as it's good info, though agent2 might also check balances later
     if (amountFloat > totalCollateral) {
-      console.log('Cannot execute: Amount exceeds collateral', { amountFloat, totalCollateral });
+      console.log('Cannot execute: Amount exceeds displayed collateral', { amountFloat, totalCollateral });
       addAppNotification(
-        `Amount (${amountFloat}) exceeds total available collateral (${totalCollateral}) across all pools`, 
-        'error'
+        `Amount (${amountFloat}) exceeds total available collateral (${totalCollateral}) across all pools. Agent2 will verify final eligibility.`,
+        'warning' // Changed to warning as agent2 is the final decider
       );
-      return;
+      // Proceeding as agent2 will make the final call, but user is warned.
     }
     
-    console.log('Calling onConfirm with:', { poolId: pool.id, merchantAddress, amountFloat });
-    onConfirm(pool.id, merchantAddress, amountFloat);
+    console.log('Calling onConfirm with:', { poolId: pool.id, merchantAddress, amountFloat, selectedBank });
+    onConfirm(pool.id, merchantAddress, amountFloat, selectedBank); // Pass selectedBank
     console.log('onConfirm called successfully');
-  }, [isLoading, merchantAddress, amount, amountFloat, totalCollateral, pool.id, onConfirm, addAppNotification]);
+  }, [isLoading, isProcessingPayment, merchantAddress, amount, selectedBank, amountFloat, totalCollateral, pool.id, onConfirm, addAppNotification]);
 
   console.log('=== Rendering UI ===', {
-    isLoading,
+    isLoading: isLoading || !!isProcessingPayment, // Combined loading states for UI
     totalCollateral,
     userPoolsLength: userPools.length,
     crossPoolAnalysis,
@@ -238,7 +253,7 @@ const FallbackModal: React.FC<FallbackModalProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-slate-800 rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-semibold text-sky-400 mb-4">
-          Cross-Pool Fallback Payment
+          Complete Payment {/* Generalized Title */}
         </h2>
         <div className="space-y-4 mb-6">
           <div>
@@ -254,7 +269,7 @@ const FallbackModal: React.FC<FallbackModalProps> = ({
               }}
               className="w-full bg-slate-700 text-white rounded-md px-3 py-2 text-sm"
               placeholder="0x..."
-              disabled={isLoading}
+              disabled={isLoading || isProcessingPayment} // Disable if loading data or processing payment
             />
           </div>
 
@@ -273,8 +288,29 @@ const FallbackModal: React.FC<FallbackModalProps> = ({
               placeholder="0.00"
               step="0.01"
               min="0"
-              disabled={isLoading}
+              disabled={isLoading || isProcessingPayment} // Disable
             />
+          </div>
+
+          {/* New Selected Bank Field */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Bank ID / Name
+            </label>
+            <input
+              type="text"
+              value={selectedBank}
+              onChange={(e) => {
+                console.log('Selected bank changed:', e.target.value);
+                setSelectedBank(e.target.value);
+              }}
+              className="w-full bg-slate-700 text-white rounded-md px-3 py-2 text-sm"
+              placeholder="e.g., bank_a_id, Chase, etc."
+              disabled={isLoading || isProcessingPayment} // Disable
+            />
+             <p className="mt-1 text-xs text-slate-400">
+              Enter the identifier for the bank you wish to use.
+            </p>
           </div>
         </div>
 
@@ -336,7 +372,7 @@ const FallbackModal: React.FC<FallbackModalProps> = ({
               onClose();
             }}
             className="flex-1 bg-slate-600 hover:bg-slate-700 text-white py-2 px-4 rounded-md text-sm font-medium transition-colors"
-            disabled={isLoading}
+            disabled={isLoading || isProcessingPayment} // Disable
           >
             Cancel
           </button>
@@ -345,17 +381,17 @@ const FallbackModal: React.FC<FallbackModalProps> = ({
               console.log('Execute Payment button clicked');
               handleConfirm();
             }}
-            disabled={isExecuteDisabled}
+            disabled={isExecuteDisabled || !!isProcessingPayment || !selectedBank.trim()} // Disable if processing or no bank selected
             className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white py-2 px-4 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2"
           >
             <DollarSignIcon size={16} />
-            {isLoading ? 'Loading...' : 'Execute Payment'}
+            {isProcessingPayment ? 'Processing...' : (isLoading ? 'Loading Data...' : 'Execute Payment')}
           </button>
         </div>
 
         <div className="mt-4 text-xs text-slate-400">
           <InfoIcon size={12} className="inline mr-1" />
-          Cross-pool payments automatically redistribute liquidity from your other regional pools if needed.
+          Payments will be routed via your selected bank if available, or through Aegis fallback if needed.
         </div>
       </div>
     </div>

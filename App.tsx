@@ -176,56 +176,85 @@ const App: React.FC = () => {
     }
   };
 
-  const handleFallbackPayment = async (
-    initialPoolId: string,
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  // The new function to call agent2
+  const initiatePaymentViaAgent = async (
+    initialPoolId: string, // Will be used as primaryFallbackPoolId
     merchantAddress: string,
-    amount: number
+    amount: number,
+    selectedBank: string
   ) => {
-    if (!currentUserData) {
+    if (!currentUserData || !address) {
       addAppNotification("Please connect your wallet.", "error");
       return;
     }
 
-    if (!fallbackPayWithCrossPools) {
-      // Use the new cross-pool function
-      addAppNotification(
-        "Cross-pool fallback payment function not available.",
-        "error"
-      );
+    // Validate selectedBank
+    if (!selectedBank || selectedBank.trim() === "") {
+      addAppNotification("Please select a bank or ensure bank ID is provided.", "error");
       return;
     }
 
+    setIsProcessingPayment(true);
+    addAppNotification("Initiating payment...", "info");
+
+    const paymentData = {
+      userId: currentUserData.id || address, // Assuming UserAccount has an id, otherwise fallback to address
+      merchantId: merchantAddress,
+      amount: amount,
+      selectedBank: selectedBank,
+      primaryFallbackPoolId: initialPoolId,
+      userGeoLocation: null, // Not collected currently
+    };
+
     try {
-      // Show initial notification about cross-pool analysis
-      addAppNotification("Analyzing cross-pool liquidity...", "info");
+      const response = await fetch("http://localhost:8000/initiatePayment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(paymentData),
+      });
 
-      const success = await fallbackPayWithCrossPools(
-        initialPoolId,
-        merchantAddress,
-        amount.toString()
-      );
+      const responseData = await response.json();
 
-      if (success) {
-        // Refresh pools and user data after successful payment
-        await loadBlockchainPools();
-        if (fetchUserData) {
-          const updatedUserData = await fetchUserData(address);
-          setCurrentUserData(updatedUserData);
-        }
-        setIsFallbackModalOpen(false);
+      if (response.ok) {
         addAppNotification(
-          "Cross-pool payment completed successfully!",
+          `Payment initiated successfully. Tx ID: ${responseData.transaction_id}`,
           "success"
+        );
+        // Simulate processing and redirect as per user request
+        // In a real app, you might navigate to an order confirmation page:
+        // history.push('/order-confirmation'); or router.push('/order-confirmation');
+        setTimeout(() => {
+          addAppNotification("Payment processed. Redirecting to confirmation...", "info");
+          // Here you would typically redirect. For now, just a message.
+          console.log("Simulating redirection to order confirmation page.");
+        }, 2000); // Simulate a 2-second processing delay
+
+      } else {
+        addAppNotification(
+          `Payment initiation failed: ${responseData.detail || "Unknown error"}`,
+          "error"
         );
       }
     } catch (error) {
-      console.error("Cross-pool fallback payment error:", error);
+      console.error("Error initiating payment via agent:", error);
       addAppNotification(
-        `Cross-pool payment failed: ${error.message}`,
+        `Payment initiation failed: ${error.message || "Network error"}`,
         "error"
       );
+    } finally {
+      setIsProcessingPayment(false);
+      setIsFallbackModalOpen(false); // Close the modal in all cases after attempt
     }
   };
+
+  // Old handleFallbackPayment can be removed or aliased if FallbackModal still calls it by that name.
+  // For now, FallbackModal's onConfirm will be updated to call initiatePaymentViaAgent.
+  // So, we can rename this or ensure FallbackModal is updated.
+  // Let's assume FallbackModal will be updated to pass `selectedBank` and call `initiatePaymentViaAgent`.
+  // The old `handleFallbackPayment` is effectively replaced.
 
   const handleRepayDebt = async (
     poolId: string,
@@ -465,7 +494,19 @@ const App: React.FC = () => {
           user={currentUserData}
           pools={pools}
           onClose={() => setIsFallbackModalOpen(false)}
-          onConfirm={handleFallbackPayment}
+          // IMPORTANT: This onConfirm now needs to be able to pass `selectedBank`
+          // It will call `initiatePaymentViaAgent`.
+          // The signature of onConfirm in FallbackModal and the data it passes will need to change.
+          // For now, let's wire it directly, assuming FallbackModal is adapted in the next step.
+          onConfirm={(poolId, merchantAddress, amount, selectedBank) => {
+            if (!selectedBank) {
+                addAppNotification("Bank information is missing. Cannot proceed.", "error");
+                // Potentially keep modal open or handle error state differently
+                return;
+            }
+            initiatePaymentViaAgent(poolId, merchantAddress, amount, selectedBank);
+          }}
+          isProcessingPayment={isProcessingPayment} // Pass loading state to modal
         />
       )}
 
