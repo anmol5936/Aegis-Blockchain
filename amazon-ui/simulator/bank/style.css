@@ -5,29 +5,30 @@
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #17202a 0%, #34495e 100%);
+    font-family: Arial, sans-serif; /* Standard sans-serif font */
+    background-color: #F0F2F2; /* Amazon-like light grey background */
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 1rem; /* Add some padding for smaller screens */
 }
 
 .container {
-    background: #5d6d7e;
-    border-radius: 20px;
+    background-color: transparent; /* Container itself is transparent */
+    border-radius: 8px; /* Standard Amazon radius */
     padding: 2rem;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); */ /* Optional: softer shadow if needed */
     text-align: center;
-    min-width: 800px;
-    max-width: 1200px;
+    width: 100%;
+    max-width: 960px; /* Max width for content */
 }
 
 h1 {
-    color: white;
+    color: #0F1111; /* Amazon dark text */
     margin-bottom: 2rem;
-    font-size: 2.5rem;
-    font-weight: 300;
+    font-size: 2rem; /* Slightly reduced */
+    font-weight: 500; /* Medium weight */
 }
 
 .banks-section {
@@ -38,23 +39,24 @@ h1 {
 }
 
 .bank-card {
-    background: #d6dbdf;
-    border-radius: 15px;
+    background: #FFFFFF; /* White background for cards */
+    border-radius: 8px; /* Standard Amazon radius */
     padding: 1.5rem;
-    border: 2px solid #e9ecef;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid #DDD; /* Amazon-like border */
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .bank-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1); /* Softer hover shadow */
 }
 
 .bank-name {
-    color: #333;
+    color: #0F1111; /* Dark text */
     margin-bottom: 1rem;
-    font-size: 1.5rem;
-    font-weight: 600;
+    font-size: 1.25rem; /* Slightly reduced */
+    font-weight: 500;
 }
 
 .status-section {
@@ -66,67 +68,77 @@ h1 {
     align-items: center;
     justify-content: center;
     gap: 0.8rem;
-    padding: 1rem;
-    border-radius: 10px;
-    background: white;
-    border: 1px solid #dee2e6;
+    padding: 0.75rem; /* Slightly reduced padding */
+    border-radius: 6px; /* Standard radius */
+    background: #f8f8f8; /* Light grey for status area within card */
+    border: 1px solid #e0e0e0;
     margin-bottom: 1rem;
 }
 
 .status-light {
-    width: 16px;
-    height: 16px;
+    width: 12px; /* Slightly smaller */
+    height: 12px;
     border-radius: 50%;
-    background: #dc3545;
-    box-shadow: 0 0 8px rgba(220, 53, 69, 0.5);
-    transition: all 0.3s ease;
+    background: #D32F2F; /* Darker Red for inactive */
+    /* box-shadow: 0 0 6px rgba(220, 53, 69, 0.4); */ /* Removing shadow for flatter look */
+    transition: background-color 0.3s ease;
 }
 
 .status-light.active {
-    background: #28a745;
-    box-shadow: 0 0 8px rgba(40, 167, 69, 0.5);
+    background: #388E3C; /* Darker Green for active */
+    /* box-shadow: 0 0 6px rgba(40, 167, 69, 0.4); */ /* Removing shadow */
 }
 
 .status-text {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #dc3545;
+    font-size: 0.9rem; /* Slightly smaller */
+    font-weight: 500;
+    color: #D32F2F; /* Darker Red for inactive text */
     transition: color 0.3s ease;
 }
 
 .status-text.active {
-    color: #28a745;
+    color: #388E3C; /* Darker Green for active text */
 }
 
 .toggle-btn {
-    background: linear-gradient(45deg, #667eea, #764ba2);
-    color: white;
-    border: none;
-    padding: 0.8rem 1.5rem;
-    font-size: 1rem;
-    border-radius: 50px;
+    background-color: #febd69; /* Amazon Yellow */
+    color: #0F1111; /* Dark text for yellow button */
+    border: 1px solid #b08500; /* Darker yellow border for definition */
+    padding: 0.7rem 1.3rem; /* Adjusted padding */
+    font-size: 0.9rem;
+    font-weight: 500; /* Normal weight for Amazon style buttons */
+    border-radius: 6px; /* Standard Amazon radius */
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-    min-width: 130px;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    /* box-shadow: 0 1px 2px rgba(0,0,0,0.05); */ /* Subtle shadow, optional */
+    min-width: 120px;
+    line-height: 1.5; /* Ensure text is centered well */
 }
 
 .toggle-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    background-color: #f7b054; /* Slightly darker yellow on hover */
+    border-color: #a07400;
 }
 
 .toggle-btn:active {
-    transform: translateY(0);
+    background-color: #e0a800; /* Even darker on active */
+    border-color: #916800;
 }
 
 .toggle-btn.stop {
-    background: linear-gradient(45deg, #dc3545, #c82333);
-    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+    background-color: #adb5bd; /* Amazon secondary/grey button */
+    color: #0F1111;
+    border-color: #8a9195; /* Border for grey button */
 }
 
 .toggle-btn.stop:hover {
-    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+    background-color: #9fa6ad;
+    border-color: #7c8389;
+}
+
+.toggle-btn.stop:active {
+    background-color: #818a91;
+    border-color: #6c757d;
 }
 
 /* Responsive Design */
