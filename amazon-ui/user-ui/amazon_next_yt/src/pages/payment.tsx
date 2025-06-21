@@ -1,3 +1,6 @@
+
+"use client";
+
 import {
   ArrowLeft,
   CheckCircle,
@@ -6,13 +9,6 @@ import {
   ChevronDown,
   Wallet,
   ExternalLink,
-  CreditCard,
-  Building2,
-  Smartphone,
-  MapPin,
-  Lock,
-  AlertCircle,
-  Info,
 } from "lucide-react";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
@@ -50,14 +46,6 @@ interface UserLocationState {
   status: "idle" | "loading" | "success" | "error";
 }
 
-<<<<<<< HEAD
-interface PaymentInterfaceProps {
-  total?: number;
-}
-
-function PaymentInterface({ total = 2499 }: PaymentInterfaceProps) {
-  const totalValue = total;
-=======
 function RenderPayment() {
   const router = useRouter();
   // const { total } = router.query; // We'll use totalAmount from Redux store now
@@ -75,7 +63,6 @@ function RenderPayment() {
   }, [productData]);
 
   const totalValue = totalAmount; // Use the state variable
->>>>>>> 529851b706ca4705703c3dda682c9a9d7ae5cc40
 
   const [walletState, setWalletState] = useState<WalletState>({
     isConnected: false,
@@ -85,77 +72,51 @@ function RenderPayment() {
   });
 
   const paymentMethods = [
-     { 
-      id: "netbanking", 
-      name: "Net Banking", 
-      icon: Building2, 
-      description: "All major banks supported"
-    },
-    { 
-      id: "phonepe", 
-      name: "PhonePe", 
-      icon: Smartphone, 
-      description: "Pay using PhonePe UPI"
-    },
-    { 
-      id: "googlepay", 
-      name: "Google Pay", 
-      icon: Smartphone, 
-      description: "Pay using Google Pay UPI"
-    },
-    { 
-      id: "paytm", 
-      name: "Paytm", 
-      icon: Smartphone, 
-      description: "Pay using Paytm wallet or UPI"
-    },
-    { 
-      id: "card", 
-      name: "Credit or debit card", 
-      icon: CreditCard, 
-      description: "Visa, Mastercard, American Express and more"
-    },
-   
+    { id: "phonepe", name: "PhonePe", icon: "/phonepe.svg", type: "image" },
+    { id: "googlepay", name: "Google Pay", icon: "/gpay.svg", type: "image" },
+    { id: "paytm", name: "Paytm", icon: "/paytm.svg", type: "image" },
+    { id: "card", name: "Credit/Debit Card", icon: "💳", type: "emoji" },
+    { id: "netbanking", name: "Net Banking", icon: "🏦", type: "emoji" },
   ];
 
   const banks = [
     {
       id: "sbi",
       name: "State Bank of India",
+      icon: "/sbi.svg",
       apiName: "SBI",
     },
     {
       id: "icici",
-      name: "ICICI Bank", 
+      name: "ICICI Bank",
+      icon: "/icici.svg",
       apiName: "ICICI Bank",
     },
-    { 
-      id: "axis", 
-      name: "Axis Bank", 
-      apiName: "Axis Bank",
-    },
+    { id: "axis", name: "Axis Bank", icon: "/axis.svg", apiName: "Axis Bank" },
     {
       id: "hdfc",
       name: "HDFC Bank",
+      icon: "/hdfc.svg", // Assuming a generic icon path
       apiName: "HDFC Bank",
     },
     {
       id: "kotak",
       name: "Kotak Mahindra Bank",
+      icon: "/kotak.svg", // Assuming a generic icon path
       apiName: "Kotak Mahindra Bank",
     },
   ];
 
   const aegisSteps = [
     {
-      message: "Initiating payment through AegisPay...",
+      message: "Initiating payment through QuestPay...",
       duration: 2000,
     },
     {
       message: "Checking user eligibility for blockchain payment...",
       duration: 2500,
     },
-    { message: "User verified ✓ Eligible for AegisPay", duration: 1500 },
+    { message: "User verified ✓ Eligible for QuestPay", duration: 1500 },
     { message: "Scanning for nearest liquidity pools...", duration: 2000 },
     {
       message: "Pool found! Connecting to decentralized network...",
@@ -237,6 +198,7 @@ function RenderPayment() {
       await handlePayment(method, bankId);
     } else {
       console.log("Payment cancelled by user.");
+      // Optionally reset any state if needed, e.g., selected payment method
       setSelectedPaymentMethod("");
       setSelectedBank("");
     }
@@ -462,35 +424,12 @@ function RenderPayment() {
   const handleBankSelection = (bankId: string) => {
     setSelectedBank(bankId);
     setShowBankDropdown(false);
+    // Call initiatePaymentProcessing instead of handlePayment directly
     initiatePaymentProcessing("netbanking", bankId);
   };
 
   return (
     <div className="min-h-screen bg-gray-100">
-<<<<<<< HEAD
-      {/* Amazon-style Header */}
-      <div className="bg-[#232f3e] text-white">
-        <div className="max-w-6xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="h-6 w-px bg-gray-500"></div>
-              <h1 className="text-lg font-medium">Checkout</h1>
-            </div>
-            <div className="flex items-center space-x-3">
-              {walletState.isConnected ? (
-                <div className="flex items-center space-x-2 bg-green-700 hover:bg-green-600 px-3 py-1.5 rounded text-sm font-medium transition-colors">
-                  <div className="w-2 h-2 bg-green-300 rounded-full"></div>
-                  <Wallet className="w-4 h-4" />
-                  <span>{formatAddress(walletState.address)}</span>
-                  <button
-                    onClick={disconnectWallet}
-                    className="text-green-200 hover:text-white ml-1 text-lg leading-none"
-                    title="Disconnect wallet"
-                  >
-                    ×
-                  </button>
-                </div>
-=======
       <div className="bg-amazon_light text-white p-4 flex items-center justify-between">
         <h1 className="text-xl font-medium">Select a payment method</h1>
         <div className="flex items-center space-x-2">
@@ -514,448 +453,68 @@ function RenderPayment() {
             >
               {walletState.isConnecting ? (
                 <Loader2 className="w-4 h-4 animate-spin text-gray-700" />
->>>>>>> 529851b706ca4705703c3dda682c9a9d7ae5cc40
               ) : (
-                <button
-                  onClick={connectWallet}
-                  disabled={walletState.isConnecting}
-                  className="flex items-center space-x-2 bg-[#ff9900] hover:bg-[#e88b00] px-3 py-1.5 rounded text-sm font-medium transition-colors disabled:opacity-50"
-                >
-                  {walletState.isConnecting ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Wallet className="w-4 h-4" />
-                  )}
-                  <span>
-                    {walletState.isConnecting ? "Connecting..." : "Connect Wallet"}
-                  </span>
-                </button>
+                <Wallet className="w-4 h-4" />
               )}
-            </div>
-          </div>
+              <span>
+                {walletState.isConnecting ? "Connecting..." : "Connect Wallet"}
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Location Status */}
-            <div className="bg-white border border-gray-300 rounded-lg">
-              <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                <h3 className="text-sm font-medium text-gray-900 flex items-center">
-                  <MapPin className="w-4 h-4 mr-2" />
-                  Location Services
-                </h3>
-              </div>
-              <div className="p-4">
-                <div className="flex items-start space-x-3">
-                  <div className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center ${
-                    userLocation.status === "success" ? "bg-green-100" :
-                    userLocation.status === "loading" ? "bg-blue-100" :
-                    userLocation.status === "error" ? "bg-red-100" : "bg-gray-100"
-                  }`}>
-                    {userLocation.status === "loading" ? (
-                      <Loader2 className="w-3 h-3 animate-spin text-blue-600" />
-                    ) : userLocation.status === "success" ? (
-                      <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-                    ) : userLocation.status === "error" ? (
-                      <div className="w-2 h-2 bg-red-600 rounded-full"></div>
-                    ) : (
-                      <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    {userLocation.status === "loading" && (
-                      <p className="text-sm text-blue-700">Detecting your location for secure payment processing...</p>
-                    )}
-                    {userLocation.status === "success" && userLocation.latitude && (
-                      <div>
-                        <p className="text-sm text-green-700 font-medium">Location detected successfully</p>
-                        <p className="text-xs text-gray-600 mt-1">
-                          Coordinates: {userLocation.latitude.toFixed(4)}, {userLocation.longitude?.toFixed(4)}
-                        </p>
-                      </div>
-                    )}
-                    {userLocation.status === "error" && (
-                      <div>
-                        <p className="text-sm text-red-700 font-medium">Location access required</p>
-                        <p className="text-xs text-gray-600 mt-1">{userLocation.error}</p>
-                        {userLocation.error?.includes("permission denied") && (
-                          <button
-                            onClick={captureUserLocation}
-                            className="text-xs text-blue-600 hover:text-blue-800 font-medium mt-2 underline"
-                          >
-                            Enable location access
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    {userLocation.status === "idle" && (
-                      <p className="text-sm text-gray-600">Initializing location services...</p>
-                    )}
-                  </div>
-                </div>
-              </div>
+      <div className="p-4">
+        <div className="mb-4 p-3 border border-gray-200 rounded-lg bg-gray-50 text-sm">
+          {userLocation.status === "loading" && (
+            <p className="text-blue-600">Fetching location...</p>
+          )}
+          {userLocation.status === "success" && userLocation.latitude && (
+            <p className="text-green-600">
+              Location captured: Lat: {userLocation.latitude.toFixed(4)}, Lon: {userLocation.longitude?.toFixed(4)}
+            </p>
+          )}
+          {userLocation.status === "error" && (
+            <div className="text-red-600">
+              <p>Location Error: {userLocation.error}</p>
+              {userLocation.error?.includes("permission denied") && (
+                <button
+                  onClick={captureUserLocation}
+                  className="text-blue-500 hover:underline ml-2"
+                >
+                  Retry Location
+                </button>
+              )}
             </div>
+          )}
+          {userLocation.status === "idle" && (
+            <p className="text-gray-600">Initializing location services...</p>
+          )}
+        </div>
 
-            {/* Wallet Status */}
-            {walletState.isConnected && (
-              <div className="bg-white border border-gray-300 rounded-lg">
-                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                  <h3 className="text-sm font-medium text-gray-900 flex items-center">
-                    <Shield className="w-4 h-4 mr-2" />
-                    Blockchain Security
-                  </h3>
-                </div>
-                <div className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                        <Wallet className="w-5 h-5 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">MetaMask Wallet Connected</p>
-                        <p className="text-xs text-gray-600 font-mono">
-                          {formatAddress(walletState.address)}
-                        </p>
-                        {walletState.balance && (
-                          <p className="text-xs text-gray-600">
-                            Balance: {walletState.balance} ETH
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <div className="w-3 h-3 bg-green-500 rounded-full mx-auto"></div>
-                      <p className="text-xs text-green-600 font-medium mt-1">SECURE</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* MetaMask Installation Notice */}
-            {!isMetaMaskInstalled() && (
-              <div className="bg-white border border-orange-300 rounded-lg">
-                <div className="px-4 py-3 border-b border-orange-200 bg-orange-50">
-                  <h3 className="text-sm font-medium text-orange-900 flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-2" />
-                    Enhanced Security Available
-                  </h3>
-                </div>
-                <div className="p-4">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Wallet className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-700 mb-3">
-                        Install MetaMask to enable advanced blockchain payment security features for this transaction.
-                      </p>
-                      <button
-                        onClick={() =>
-                          window.open("https://metamask.io/download/", "_blank")
-                        }
-                        className="inline-flex items-center text-sm bg-[#ff9900] hover:bg-[#e88b00] text-white px-3 py-1.5 rounded font-medium transition-colors"
-                      >
-                        Install MetaMask
-                        <ExternalLink className="w-3 h-3 ml-1" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Payment Methods Selection */}
-            {paymentStep === "selection" && (
-              <div className="bg-white border border-gray-300 rounded-lg">
-                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                  <h3 className="text-lg font-medium text-gray-900">Select a payment method</h3>
-                </div>
-                <div className="p-4 space-y-3">
-                  {paymentMethods.map((method) => {
-                    const IconComponent = method.icon;
-                    return (
-                      <div key={method.id}>
-                        {method.id === "netbanking" ? (
-                          <div className="border border-gray-300 rounded-lg overflow-hidden">
-                            <button
-                              onClick={() => setShowBankDropdown(!showBankDropdown)}
-                              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors text-left"
-                            >
-                              <div className="flex items-center space-x-3">
-                                <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
-                                  <IconComponent className="w-5 h-5 text-gray-600" />
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium text-gray-900">{method.name}</p>
-                                  <p className="text-xs text-gray-600">{method.description}</p>
-                                </div>
-                              </div>
-                              <ChevronDown
-                                className={`w-5 h-5 text-gray-400 transform transition-transform duration-200 ${
-                                  showBankDropdown ? "rotate-180" : ""
-                                }`}
-                              />
-                            </button>
-                            {showBankDropdown && (
-                              <div className="border-t border-gray-200 bg-gray-50">
-                                {banks.map((bank) => (
-                                  <button
-                                    key={bank.id}
-                                    onClick={() => handleBankSelection(bank.id)}
-                                    className="w-full flex items-center p-4 hover:bg-white transition-colors text-left border-b border-gray-100 last:border-b-0"
-                                  >
-                                    <div className="w-6 h-6 bg-white border border-gray-200 rounded flex items-center justify-center mr-3">
-                                      <Building2 className="w-4 h-4 text-gray-600" />
-                                    </div>
-                                    <span className="text-sm text-gray-900">{bank.name}</span>
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => initiatePaymentProcessing(method.id)}
-                            className="w-full flex items-center p-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-left"
-                          >
-                            <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center mr-3">
-                              <IconComponent className="w-5 h-5 text-gray-600" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">{method.name}</p>
-                              <p className="text-xs text-gray-600">{method.description}</p>
-                            </div>
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Processing State */}
-            {paymentStep === "processing" && (
-              <div className="bg-white border border-gray-300 rounded-lg">
-                <div className="p-8 text-center">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Processing your payment</h3>
+        {walletState.isConnected && (
+          <div className="bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium text-gray-800 flex items-center">
+                  <Wallet className="w-4 h-4 mr-2 text-green-600" />
+                  Wallet Connected
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {formatAddress(walletState.address)}
+                </p>
+                {walletState.balance && (
                   <p className="text-sm text-gray-600">
-                    {selectedPaymentMethod === "netbanking" && selectedBank ? (
-                      <>
-                        Connecting to <span className="font-medium">{banks.find((b) => b.id === selectedBank)?.name}</span>...
-                      </>
-                    ) : (
-                      <>
-                        Connecting to <span className="font-medium">
-                          {paymentMethods.find((m) => m.id === selectedPaymentMethod)?.name}
-                        </span>...
-                      </>
-                    )}
+                    Balance: {walletState.balance} ETH
                   </p>
-                </div>
-              </div>
-            )}
-
-            {/* Aegis Redirect State */}
-            {paymentStep === "aegis-redirect" && (
-              <div className="bg-white border border-gray-300 rounded-lg">
-                <div className="p-8 text-center">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Shield className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">AegisPay Security Activated</h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Your payment is being processed through our secure blockchain infrastructure.
-                  </p>
-                  {walletState.isConnected && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-                      <p className="text-sm text-green-700 flex items-center justify-center">
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Wallet secured: {formatAddress(walletState.address)}
-                      </p>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-center">
-                    <Loader2 className="w-5 h-5 animate-spin mr-2 text-blue-600" />
-                    <span className="text-sm text-gray-600">Initializing secure payment protocol...</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Aegis Processing State */}
-            {paymentStep === "aegis-processing" && (
-              <div className="bg-white border border-gray-300 rounded-lg">
-                <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium text-gray-900 flex items-center">
-                      <Shield className="w-4 h-4 mr-2" />
-                      AegisPay Blockchain Processing
-                    </h3>
-                    {walletState.isConnected && (
-                      <div className="flex items-center text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
-                        <Wallet className="w-3 h-3 mr-1" />
-                        {formatAddress(walletState.address)}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="p-4">
-                  <div className="space-y-3">
-                    {aegisSteps.map((step, index) => (
-                      <div
-                        key={index}
-                        className={`flex items-center p-3 rounded-lg transition-all duration-500 ${
-                          index < currentAegisStep
-                            ? "bg-green-50 border border-green-200"
-                            : index === currentAegisStep
-                            ? "bg-blue-50 border border-blue-200"
-                            : "bg-gray-50 border border-gray-200"
-                        }`}
-                      >
-                        {index < currentAegisStep ? (
-                          <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                            <CheckCircle className="w-4 h-4 text-white" />
-                          </div>
-                        ) : index === currentAegisStep ? (
-                          <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                            <Loader2 className="w-4 h-4 animate-spin text-white" />
-                          </div>
-                        ) : (
-                          <div className="w-6 h-6 rounded-full border-2 border-gray-300 mr-3 flex-shrink-0" />
-                        )}
-                        <span
-                          className={`text-sm ${
-                            index <= currentAegisStep
-                              ? "text-gray-900 font-medium"
-                              : "text-gray-500"
-                          }`}
-                        >
-                          {step.message}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {aegisMessage && (
-                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-blue-800 font-medium text-center text-sm">
-                        {aegisMessage}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Success State */}
-            {paymentStep === "success" && (
-              <div className="bg-white border border-gray-300 rounded-lg">
-                <div className="p-8 text-center">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle className="w-10 h-10 text-green-600" />
-                  </div>
-                  <h3 className="text-xl font-medium mb-2 text-green-600">
-                    Order placed successfully
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-2">
-                    Your order has been confirmed and will be processed shortly.
-                  </p>
-                  <p className="text-xs text-gray-500 mb-6">
-                    {selectedPaymentMethod === "netbanking" && selectedBank
-                      ? "Payment completed via Net Banking"
-                      : walletState.isConnected
-                      ? `Secured transaction via AegisPay blockchain (${formatAddress(
-                          walletState.address
-                        )})`
-                      : "Payment processed via AegisPay"}
-                  </p>
-                  <div className="inline-flex items-center bg-green-50 border border-green-200 px-4 py-2 rounded-lg">
-                    <Lock className="w-4 h-4 text-green-600 mr-2" />
-                    <span className="text-sm text-green-700 font-medium">Transaction Secured</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Error State */}
-            {paymentStep === "error" && (
-              <div className="bg-white border border-gray-300 rounded-lg">
-                <div className="p-8 text-center">
-                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <AlertCircle className="w-10 h-10 text-red-600" />
-                  </div>
-                  <h3 className="text-xl font-medium mb-2 text-red-600">
-                    Payment failed
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-6">
-                    There was a problem processing your payment. Please try again or use a different payment method.
-                  </p>
-                  <button
-                    onClick={() => setPaymentStep("selection")}
-                    className="bg-[#ff9900] hover:bg-[#e88b00] text-white py-2 px-4 rounded font-medium transition-colors"
-                  >
-                    Try again
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Order Summary Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white border border-gray-300 rounded-lg sticky top-6">
-              <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                <h3 className="text-lg font-medium text-gray-900">Order Summary</h3>
-              </div>
-              <div className="p-4">
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Items:</span>
-                    <span className="text-gray-900">{formatPrice(totalValue)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Delivery:</span>
-                    <span className="text-green-600 font-medium">FREE</span>
-                  </div>
-                  <div className="border-t border-gray-200 pt-3">
-                    <div className="flex justify-between">
-                      <span className="text-lg font-medium text-gray-900">Order Total:</span>
-                      <span className="text-lg font-bold text-red-600">{formatPrice(totalValue)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-start space-x-2">
-                    <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-xs text-blue-800 font-medium">AegisPay Protection</p>
-                      <p className="text-xs text-blue-700 mt-1">
-                        Your payment is secured with blockchain technology for enhanced security and transparency.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {paymentStep === "selection" && (
-                  <div className="mt-4 text-xs text-gray-500">
-                    <p>By placing your order, you agree to our terms and conditions.</p>
-                  </div>
                 )}
               </div>
+              <div className="text-right">
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <p className="text-xs text-green-600 mt-1">Secure</p>
+              </div>
             </div>
           </div>
-<<<<<<< HEAD
-        </div>
-=======
         )}
 
         {!isMetaMaskInstalled() && (
@@ -1247,10 +806,9 @@ function RenderPayment() {
             </button>
           </div>
         )}
->>>>>>> 529851b706ca4705703c3dda682c9a9d7ae5cc40
       </div>
     </div>
   );
 }
 
-export default PaymentInterface;
+export default RenderPayment;
