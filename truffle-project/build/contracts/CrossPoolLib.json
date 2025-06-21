@@ -31075,12 +31075,12 @@
     "5777": {
       "events": {},
       "links": {},
-      "address": "0xe3775A02EdB1413e7d536C62c66Ba38C6D343A8f",
-      "transactionHash": "0x4ba1298adb07afa345db05e4453ed08932b93168bdfc70ad7925c54646eeaefa"
+      "address": "0xbFe72074ae1652F41520d5e06808C9D6e04f292b",
+      "transactionHash": "0x2df73dc055f468e507f48812c805a2565d4268fea7d0fe691cd14678fcdfd2a0"
     }
   },
   "schemaVersion": "3.4.16",
-  "updatedAt": "2025-06-20T20:01:45.059Z",
+  "updatedAt": "2025-06-21T17:17:45.860Z",
   "networkType": "ethereum",
   "devdoc": {
     "kind": "dev",
