@@ -58,8 +58,9 @@ except FileNotFoundError as e:
 class TransactionRouterRecoveryAgent:
     def __init__(self):
         print("Agent 2 script started")
-        self.current_bank_status = "unknown"
-        self.bank_status_lock = threading.Lock()
+        # self.current_bank_status = "unknown" # Replaced by bank_statuses dictionary
+        self.bank_statuses: Dict[str, str] = {} # Stores status for each bank_id
+        self.bank_status_lock = threading.Lock() # To protect access to bank_statuses
 
         self.validate_pool_via_factory = os.getenv('VALIDATE_POOL_VIA_FACTORY', 'true').lower() == 'true'
         logger.info(f"Pool validation via PoolFactory: {self.validate_pool_via_factory}")
@@ -136,15 +137,19 @@ class TransactionRouterRecoveryAgent:
         token_balance = self.staking_token_contract.functions.balanceOf(self.signer_address).call()
         logger.info(f"Signer ETH balance: {self.w3.from_wei(eth_balance, 'ether')} ETH, Token balance: {token_balance / 10**self.token_decimals}")
 
-    def get_bank_status(self):
+    def get_specific_bank_status(self, bank_id: str) -> str:
+        """Gets the status for a specific bank_id, defaults to 'unknown'."""
         with self.bank_status_lock:
-            return self.current_bank_status
+            return self.bank_statuses.get(bank_id, "unknown")
 
-    def set_bank_status(self, status):
+    def set_bank_status(self, bank_id: str, status: str):
+        """Sets the status for a specific bank_id."""
         with self.bank_status_lock:
-            if self.current_bank_status != status:
-                self.current_bank_status = status
-                logger.info(f"Bank status updated to: {self.current_bank_status}")
+            if self.bank_statuses.get(bank_id) != status:
+                self.bank_statuses[bank_id] = status.lower()
+                logger.info(f"Bank status updated for {bank_id}: {status.lower()}")
+            else:
+                logger.debug(f"Bank status for {bank_id} remains {status.lower()}")
 
     def delivery_report(self, err, msg):
         if err is not None:
@@ -298,8 +303,12 @@ class TransactionRouterRecoveryAgent:
                     'nonce': self.w3.eth.get_transaction_count(self.signer_address),
                     'gasPrice': self.w3.eth.gas_price,
                 })
-            elif function_name == 'unstakeFromPool' and 'lpTokens' in function_args:
-                tx = contract_function(function_args['lpTokens']).build_transaction({
+            elif function_name == 'unstakeFromPool' and 'poolAddress' in function_args and 'lpTokens' in function_args:
+                # Correctly call with poolAddress and lpTokens
+                tx = contract_function(
+                    Web3.to_checksum_address(function_args['poolAddress']),
+                    function_args['lpTokens']
+                ).build_transaction({
                     'from': self.signer_address,
                     'nonce': self.w3.eth.get_transaction_count(self.signer_address),
                     'gasPrice': self.w3.eth.gas_price,
@@ -351,10 +360,12 @@ class TransactionRouterRecoveryAgent:
                     try:
                         data = json.loads(msg.value().decode('utf-8'))
                         logger.debug(f"Received bank status raw message: {data}")
-                        if "status" in data:
-                            self.set_bank_status(data["status"].lower())
+                        bank_id = data.get("bank_id")
+                        status = data.get("status")
+                        if bank_id and status:
+                            self.set_bank_status(bank_id, status.lower())
                         else:
-                            logger.warning("Bank status message missing 'status' field.")
+                            logger.warning(f"Bank status message missing 'bank_id' or 'status' field: {data}")
                     except Exception as e:
                         logger.error(f"Error processing bank_status message: {e}")
         except Exception as e:
@@ -403,19 +414,51 @@ class TransactionRouterRecoveryAgent:
                 logger.info(f"Dequeued transaction: {message_json}")
                 transaction_data = json.loads(message_json)
                 tx_id = transaction_data.get('transaction_id', 'N/A')
-                bank_status = self.get_bank_status()
-                logger.info(f"Processing tx {tx_id}. Bank status: {bank_status}")
-
+                selected_bank = transaction_data.get('selected_bank') # Get the specific bank for this transaction
                 user_id = transaction_data.get('user_id')
+
+                if not selected_bank:
+                    logger.warning(f"Transaction {tx_id} for user {user_id} missing 'selected_bank'. Cannot determine bank status. Re-queueing.")
+                    self.redis_client.rpush(TRANSACTION_REQUESTS_QUEUE, message_json) # Re-queue if no bank info
+                    time.sleep(5)
+                    continue
+
+                specific_bank_status = self.get_specific_bank_status(selected_bank)
+                logger.info(f"Processing tx {tx_id} for bank '{selected_bank}'. Bank status: {specific_bank_status}")
+
                 user_geo_location_data = transaction_data.get('user_geo_location')
                 primary_fallback_pool_from_request = transaction_data.get("primary_pool_id_for_fallback")
 
-                if bank_status == "up":
+                if specific_bank_status == "up":
                     self.kafka_producer.produce(BANK_TX_PROCESSING_TOPIC, json.dumps(transaction_data).encode('utf-8'), callback=self.delivery_report)
-                    logger.info(f"Tx {tx_id} routed to {BANK_TX_PROCESSING_TOPIC} for user {user_id}")
-                elif bank_status == "down":
-                    logger.info(f"Bank DOWN. Fallback for tx {tx_id} of user {user_id}")
+                    logger.info(f"Tx {tx_id} for bank '{selected_bank}' routed to {BANK_TX_PROCESSING_TOPIC} for user {user_id}")
+                elif specific_bank_status == "down":
+                    logger.info(f"Bank '{selected_bank}' is DOWN. Attempting fallback or queuing for recovery for tx {tx_id} of user {user_id}.")
 
+                    # Option 1: Try fallback first. If fallback is not applicable or fails, then queue for recovery.
+                    # For now, let's assume if bank is down, we queue for later bank processing via RECOVERY_PAYMENTS_QUEUE
+                    # and also attempt fallback. The problem description implies recovery happens after fallback if bank is still down.
+                    # Let's simplify: if bank is down, we push to recovery queue. Fallback is a separate path.
+                    # The user request: "suppose the payment goes to fallback and in redis transaction is store when bank goe goes up agent 2 will do that repayment"
+                    # This implies that after a fallback attempt (or instead of a direct bank attempt if bank is down), it should be in Redis for Agent 2.
+                    # The `RECOVERY_PAYMENTS_QUEUE` seems the right place.
+
+                    # Add to recovery queue
+                    # Ensure the recovery data has a 'method' field, if process_recovery_payments expects it.
+                    # Based on process_recovery_payments, it looks for 'method' like 'bank_account'.
+                    recovery_payload = transaction_data.copy() # Avoid modifying the original dict if it's re-used
+                    recovery_payload['method'] = 'bank_account' # Assuming this is the method for bank payments
+                    recovery_payload['recovery_id'] = tx_id # Use transaction_id as recovery_id
+
+                    # Ensure all necessary fields for recovery are present.
+                    # 'selected_bank' is already in transaction_data from initiatePayment.
+
+                    self.redis_client.lpush(RECOVERY_PAYMENTS_QUEUE, json.dumps(recovery_payload))
+                    logger.info(f"Tx {tx_id} for bank '{selected_bank}' (user {user_id}) queued to {RECOVERY_PAYMENTS_QUEUE} because bank is down.")
+
+                    # Fallback logic (kept from original, but now bank-down also queues for later bank processing)
+                    # Fallback should still be attempted as per original logic, even if we've queued for bank recovery.
+                    logger.info(f"Attempting blockchain fallback for tx {tx_id} of user {user_id} as bank '{selected_bank}' is down.")
                     effective_pool_id = primary_fallback_pool_from_request  # Default
                     if user_geo_location_data:
                         logger.info(f"Attempting to get optimal pool from Agent 3 for user {user_id} with geo {user_geo_location_data}")
@@ -505,10 +548,12 @@ class TransactionRouterRecoveryAgent:
                     except Exception as e:
                         logger.error(f"General error during fallback process for tx {tx_id} (user {user_id}): {e}. Pool: {pool_id_for_fallback}", exc_info=True)
 
-                else:  # unknown status
-                    logger.warning(f"Bank status '{bank_status}' for tx {tx_id} (user {user_id}). Re-queueing.")
+                # Handle unknown status for the specific bank by re-queueing to the transaction_requests queue
+                elif specific_bank_status == "unknown":
+                    logger.warning(f"Bank status for '{selected_bank}' is '{specific_bank_status}' for tx {tx_id} (user {user_id}). Re-queueing to {TRANSACTION_REQUESTS_QUEUE}.")
                     self.redis_client.rpush(TRANSACTION_REQUESTS_QUEUE, message_json)
-                    time.sleep(5)
+                    time.sleep(5) # Wait a bit before retrying
+
                 self.kafka_producer.poll(0)
                 self.kafka_producer.flush(timeout=1.0)
             except redis.exceptions.ConnectionError as e:
@@ -602,29 +647,133 @@ class TransactionRouterRecoveryAgent:
         logger.info(f"Starting recovery_payments processor on Redis queue: {RECOVERY_PAYMENTS_QUEUE}")
         while True:
             try:
-                bank_status = self.get_bank_status()
-                if bank_status != "up":
-                    time.sleep(15)
-                    continue
+                # This method processes payments that need bank interaction after potential initial failure or bank downtime.
+                # It should check the specific bank's status before proceeding.
 
                 message_tuple = self.redis_client.blpop([RECOVERY_PAYMENTS_QUEUE], timeout=5)
                 if not message_tuple: continue
 
                 _, message_json = message_tuple
-                logger.info(f"Dequeued recovery: {message_json}")
+                logger.info(f"Dequeued recovery payment: {message_json}")
                 recovery_data = json.loads(message_json)
-                rec_id = recovery_data.get("recovery_id", "N/A")
-                method = recovery_data.get("method", "").lower()
-                logger.info(f"Processing recovery {rec_id} (method: {method}). Bank status: {bank_status}")
 
-                if method == "credit_card":
-                    self.kafka_producer.produce(CREDIT_CARD_RECOVERY_TOPIC, json.dumps(recovery_data).encode('utf-8'), callback=self.delivery_report)
-                    logger.info(f"Recovery {rec_id} (CC) routed to {CREDIT_CARD_RECOVERY_TOPIC}")
-                elif method == "bank_account":
-                    self.kafka_producer.produce(BANK_RECOVERY_TOPIC, json.dumps(recovery_data).encode('utf-8'), callback=self.delivery_report)
-                    logger.info(f"Recovery {rec_id} (Bank) routed to {BANK_RECOVERY_TOPIC}")
-                elif method == "blockchain":
+                rec_id = recovery_data.get("recovery_id") or recovery_data.get("transaction_id", "N/A")
+                method = recovery_data.get("method", "").lower()
+                selected_bank = recovery_data.get("selected_bank")
+
+                if not selected_bank:
+                    logger.warning(f"Recovery payment {rec_id} missing 'selected_bank'. Cannot process. Re-queueing.")
+                    self.redis_client.rpush(RECOVERY_PAYMENTS_QUEUE, message_json)
+                    time.sleep(5)
+                    continue
+
+                specific_bank_status = self.get_specific_bank_status(selected_bank)
+                logger.info(f"Processing recovery {rec_id} for bank '{selected_bank}' (method: {method}). Bank status: {specific_bank_status}")
+
+                # Handle blockchain method separately as it's likely bank-agnostic
+                if method == "blockchain":
                     pool_id = recovery_data.get("pool_id_for_unstake")
+                    lp_tokens = recovery_data.get("lp_tokens_to_unstake")
+                    if not all([pool_id, lp_tokens]):
+                        logger.error(f"Missing params for blockchain unstake (rec {rec_id}). Data: {recovery_data}")
+                        self.redis_client.rpush(RECOVERY_PAYMENTS_QUEUE, message_json) # Re-queue if params missing
+                        time.sleep(1)
+                        continue
+
+                    if self.pool_factory_contract: # Check if contract is available
+                        try:
+                            # Ensure lp_tokens is float or int before w3.to_wei
+                            lp_tokens_val = float(lp_tokens)
+                            lp_tokens_wei = self.w3.to_wei(lp_tokens_val, 'ether')
+                            params = {
+                                # 'poolId': Web3.to_checksum_address(pool_id), # poolId is not part of unstakeFromPool in PoolFactory.sol
+                                'lpTokens': lp_tokens_wei
+                            }
+                            # The function unstakeFromPool in PoolFactory.sol takes (address pool, uint256 lpTokens)
+                            # So we need the pool_id for the first argument.
+                            # Assuming pool_id here is the address of the LiquidityPool contract.
+                            # Let's check the _send_blockchain_transaction, it builds based on function name and args.
+                            # The original code called self.pool_factory_contract.functions.unstakeFromPool
+                            # This function in PoolFactory.sol is: function unstakeFromPool(address pool, uint256 lpTokens)
+                            # So, the params should be structured for this.
+                            # The original code for 'blockchain' method in process_recovery_payments was trying to call unstakeFromPool on pool_factory_contract
+                            # with params {'poolId': Web3.to_checksum_address(pool_id), 'lpTokens': lp_tokens_wei}
+                            # This implies the contract_function itself would be `self.pool_factory_contract.functions.unstakeFromPool`
+                            # and the arguments passed to it would be `(Web3.to_checksum_address(pool_id), lp_tokens_wei)`
+                            # The _send_blockchain_transaction needs to be able to handle this.
+                            # Let's look at _send_blockchain_transaction:
+                            # elif function_name == 'unstakeFromPool' and 'lpTokens' in function_args:
+                            #    tx = contract_function(function_args['lpTokens']).build_transaction(...)
+                            # This is problematic if unstakeFromPool requires two args (pool_address, lpTokens)
+                            # The original code for 'blockchain' recovery did this:
+                            # tx_hash = self._send_blockchain_transaction(
+                            #     self.pool_factory_contract.functions.unstakeFromPool, <--- This is the contract function object
+                            #     params,  <-- This was {'poolId': ..., 'lpTokens': ...}
+                            #     rec_id
+                            # )
+                            # This structure means `_send_blockchain_transaction` receives the function object and a dict of args.
+                            # It then tries to call it.
+                            # The issue is `unstakeFromPool` in `_send_blockchain_transaction` only uses `function_args['lpTokens']`.
+                            # This needs to be fixed in `_send_blockchain_transaction` or how params are passed.
+                            # For now, let's assume `_send_blockchain_transaction` is updated or we pass args directly.
+                            # Given the current structure of _send_blockchain_transaction, it expects specific named args in function_args.
+                            # The original code for blockchain recovery was:
+                            # tx = contract_function(function_args['regionName']).build_transaction({ ... }) for createPool
+                            # tx = contract_function(function_args['lpTokens']).build_transaction({ ... }) for unstakeFromPool
+                            # This `unstakeFromPool` in `_send_blockchain_transaction` needs to accept `poolId` too.
+
+                            # Let's make a minimal change here assuming _send_blockchain_transaction will be fixed later or can handle it.
+                            # The most direct way is to call it as it was originally structured for this method.
+                            tx_hash = self._send_blockchain_transaction(
+                                self.pool_factory_contract.functions.unstakeFromPool,
+                                {"poolAddress": Web3.to_checksum_address(pool_id), "lpTokens": lp_tokens_wei}, # Adjusted for clarity, but _send_blockchain_transaction needs to handle this
+                                rec_id
+                            )
+                            if tx_hash:
+                                logger.info(f"Blockchain unstake transaction {rec_id} initiated with hash: {tx_hash}")
+                            else:
+                                logger.error(f"Blockchain unstake transaction {rec_id} failed to send. Re-queueing.")
+                                self.redis_client.rpush(RECOVERY_PAYMENTS_QUEUE, message_json)
+                        except ValueError as e: # Catch error from to_checksum_address or float conversion
+                            logger.error(f"Invalid pool_id or lp_tokens format for blockchain unstake rec {rec_id}: {e}. Re-queueing.")
+                            self.redis_client.rpush(RECOVERY_PAYMENTS_QUEUE, message_json)
+                        except Exception as e:
+                            logger.error(f"Blockchain unstake transaction failed for rec {rec_id}: {e}. Re-queueing.", exc_info=True)
+                            self.redis_client.rpush(RECOVERY_PAYMENTS_QUEUE, message_json)
+                    else:
+                        logger.error(f"PoolFactory contract not initialized for blockchain unstake rec {rec_id}. Re-queueing.")
+                        self.redis_client.rpush(RECOVERY_PAYMENTS_QUEUE, message_json)
+                    # After processing blockchain method, continue to next message.
+                    self.kafka_producer.poll(0) # Poll after each message processing attempt
+                    self.kafka_producer.flush(timeout=1.0)
+                    continue # Move to the next message from queue
+
+                # For other methods (credit_card, bank_account), check bank status
+                if specific_bank_status == "up":
+                    if method == "credit_card":
+                        self.kafka_producer.produce(CREDIT_CARD_RECOVERY_TOPIC, json.dumps(recovery_data).encode('utf-8'), callback=self.delivery_report)
+                        logger.info(f"Recovery {rec_id} (CC via bank '{selected_bank}') routed to {CREDIT_CARD_RECOVERY_TOPIC}")
+                    elif method == "bank_account":
+                        self.kafka_producer.produce(BANK_RECOVERY_TOPIC, json.dumps(recovery_data).encode('utf-8'), callback=self.delivery_report)
+                        logger.info(f"Recovery {rec_id} (Bank '{selected_bank}') routed to {BANK_RECOVERY_TOPIC}")
+                    else:
+                        logger.warning(f"Unknown recovery method '{method}' for rec {rec_id} (bank '{selected_bank}'). Re-queueing.")
+                        self.redis_client.rpush(RECOVERY_PAYMENTS_QUEUE, message_json)
+                        time.sleep(1)
+
+                elif specific_bank_status == "down":
+                    logger.info(f"Bank '{selected_bank}' is still DOWN for recovery tx {rec_id} (method: {method}). Re-queueing to {RECOVERY_PAYMENTS_QUEUE}.")
+                    self.redis_client.rpush(RECOVERY_PAYMENTS_QUEUE, message_json)
+                    time.sleep(15)
+
+                else: # specific_bank_status == "unknown"
+                    logger.warning(f"Bank status for '{selected_bank}' is UNKNOWN for recovery tx {rec_id} (method: {method}). Re-queueing to {RECOVERY_PAYMENTS_QUEUE}.")
+                    self.redis_client.rpush(RECOVERY_PAYMENTS_QUEUE, message_json)
+                    time.sleep(10)
+
+                # This was the original position for blockchain processing.
+                # if method == "blockchain":
+                #     pool_id = recovery_data.get("pool_id_for_unstake")
                     lp_tokens = recovery_data.get("lp_tokens_to_unstake")
                     if not all([pool_id, lp_tokens]):
                         logger.error(f"Missing params for unstake (rec {rec_id}). Data: {recovery_data}")
@@ -1201,7 +1350,7 @@ async def health_check(agent: TransactionRouterRecoveryAgent = Depends(get_agent
         "status": "ok" if is_redis_connected and is_web3_connected else "degraded",
         "redis_connected": is_redis_connected,
         "web3_connected": is_web3_connected,
-        "bank_status_from_kafka": agent.get_bank_status(),
+        "bank_statuses": agent.bank_statuses.copy(), # Show status for all known banks
         "active_threads": threads_status
     }
 
