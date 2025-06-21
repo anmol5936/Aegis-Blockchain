@@ -1,0 +1,9 @@
+requests
+redis>=5.0.3
+confluent-kafka>=2.4.0
+fastapi
+uvicorn
+pydantic
+web3
+python-dotenv
+aiohttp

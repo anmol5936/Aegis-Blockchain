@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  agent1_bank_monitor:
+    build:
+      context: ./agent1
+    container_name: agent1_bank_monitor
+    env_file:
+      - .env # Assumes a .env file exists, created from .env.example
+    restart: unless-stopped
+    networks:
+      - payment_network
+
+  agent2_transaction_router:
+    build:
+      context: ./agent2
+    container_name: agent2_transaction_router
+    ports:
+      - "8000:8000" # Expose FastAPI port
+    env_file:
+      - .env
+    restart: unless-stopped
+    depends_on:
+      - agent1_bank_monitor # Optional: wait for agent1 to start, though not strictly necessary for functionality
+    networks:
+      - payment_network
+
+  agent3_liquidity_optimizer:
+    build:
+      context: ./agent3
+    container_name: agent3_liquidity_optimizer
+    env_file:
+      - .env
+    restart: unless-stopped
+    depends_on:
+      - agent2_transaction_router # Optional: wait for agent2
+    networks:
+      - payment_network
+
+networks:
+  payment_network:
+    driver: bridge

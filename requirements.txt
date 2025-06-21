@@ -1,0 +1,7 @@
+confluent-kafka
+redis
+fastapi
+uvicorn
+python-dotenv
+requests
+# Add any other specific versions if known, e.g., confluent-kafka==1.9.2

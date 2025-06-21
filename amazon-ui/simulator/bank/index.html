@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Simulator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Bank Simulator</h1>
+
+        <div class="banks-section">
+            <div class="bank-card" data-bank="SBI">
+                <h2 class="bank-name">SBI</h2>
+                <div class="status-indicator">
+                    <div class="status-light" id="statusLight-SBI"></div>
+                    <span class="status-text" id="statusText-SBI">INACTIVE</span>
+                </div>
+                <button class="toggle-btn" id="toggleBtn-SBI">Start Server</button>
+            </div>
+
+            <div class="bank-card" data-bank="Axis Bank">
+                <h2 class="bank-name">Axis Bank</h2>
+                <div class="status-indicator">
+                    <div class="status-light" id="statusLight-Axis Bank"></div>
+                    <span class="status-text" id="statusText-Axis Bank">INACTIVE</span>
+                </div>
+                <button class="toggle-btn" id="toggleBtn-Axis Bank">Start Server</button>
+            </div>
+
+            <div class="bank-card" data-bank="ICICI Bank">
+                <h2 class="bank-name">ICICI Bank</h2>
+                <div class="status-indicator">
+                    <div class="status-light" id="statusLight-ICICI Bank"></div>
+                    <span class="status-text" id="statusText-ICICI Bank">INACTIVE</span>
+                </div>
+                <button class="toggle-btn" id="toggleBtn-ICICI Bank">Start Server</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

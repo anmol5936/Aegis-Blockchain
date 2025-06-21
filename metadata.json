@@ -1,0 +1,5 @@
+
+{
+  "name": "Aegis Liquidity Protocol Simulator",
+  "description": "A React application simulating a decentralized liquidity protocol with features like staking, fallback payments, debt repayment, and reward distribution across regional pools."
+}

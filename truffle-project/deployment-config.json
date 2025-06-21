@@ -1,0 +1,31 @@
+{
+  "network": "development",
+  "timestamp": "2025-06-20T20:01:44.897Z",
+  "contracts": {
+    "POOL_FACTORY_ADDRESS": "0x0d13e5ed1971DEe58Cd02deb2F26E12f77D6180A",
+    "STAKING_TOKEN_ADDRESS": "0xa4B7b699d46CFc0eD9CB8eC84C4B78398c990e6a",
+    "CROSS_POOL_LIB_ADDRESS": "0xe3775A02EdB1413e7d536C62c66Ba38C6D343A8f",
+    "DEBT_LIB_ADDRESS": "0x879d0d4929952A726af6cE8D5D973A4b4116f214",
+    "DEMO_POOLS": [
+      {
+        "region": "Mumbai",
+        "address": "0x6e26fDC11bFf75C63dF692e08cdC7180dFCAea19"
+      },
+      {
+        "region": "Delhi",
+        "address": "0xef4b59a4739Cd218FDcC1f54566476cb1389e461"
+      },
+      {
+        "region": "Bangalore",
+        "address": "0x07e1b6DC61801A738FF32689e9d802cd372fC037"
+      }
+    ]
+  },
+  "accounts": [
+    "0x6f6a29CD4b0fd655866c5f1A7fE3Fba89EfF7356",
+    "0xa3e95e00ec9a587bfDA23D1719Fc67cc64f41C3B",
+    "0x0B30087c5653BCdbEfF78C55199AC4eE083F8cfC",
+    "0xf597AD3cB15eB20d15A3ce4DF3b3C83714874C86",
+    "0xC69397b0a539fE76FB9f884b64A881CBC5929387"
+  ]
+}
