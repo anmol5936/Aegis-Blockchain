@@ -12,6 +12,9 @@ import {
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/router";
+import { useSelector } from "react-redux";
+import { StateProps, StoreProduct } from "../../../type"; // Adjusted path
+import FormattedPrice from "../components/FormattedPrice"; // Import FormattedPrice
 
 // Extend Window interface for MetaMask
 declare global {
@@ -44,8 +47,21 @@ interface UserLocationState {
 
 function RenderPayment() {
   const router = useRouter();
-  const { total } = router.query;
-  const totalValue = total ? parseFloat(total as string) : 0;
+  // const { total } = router.query; // We'll use totalAmount from Redux store now
+  // const totalValue = total ? parseFloat(total as string) : 0;
+
+  const { productData } = useSelector((state: StateProps) => state.next);
+  const [totalAmount, setTotalAmount] = useState(0);
+
+  useEffect(() => {
+    let amt = 0;
+    productData.forEach((item: StoreProduct) => {
+      amt += item.price * item.quantity;
+    });
+    setTotalAmount(amt);
+  }, [productData]);
+
+  const totalValue = totalAmount; // Use the state variable
 
   const [walletState, setWalletState] = useState<WalletState>({
     isConnected: false,
@@ -412,9 +428,9 @@ function RenderPayment() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-[#232f3e] text-white p-4 flex items-center justify-between">
-        <h1 className="text-lg font-medium">Select a payment method</h1>
+    <div className="min-h-screen bg-gray-100">
+      <div className="bg-amazon_light text-white p-4 flex items-center justify-between">
+        <h1 className="text-xl font-medium">Select a payment method</h1>
         <div className="flex items-center space-x-2">
           {walletState.isConnected ? (
             <div className="flex items-center space-x-2 bg-green-600 px-3 py-1 rounded-full text-sm">
@@ -432,10 +448,10 @@ function RenderPayment() {
             <button
               onClick={connectWallet}
               disabled={walletState.isConnecting}
-              className="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 px-3 py-1 rounded-full text-sm transition-colors disabled:opacity-50"
+              className="flex items-center space-x-2 bg-amazon_yellow hover:bg-yellow-500 text-black px-3 py-1 rounded-full text-sm transition-colors disabled:opacity-50"
             >
               {walletState.isConnecting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin text-gray-700" />
               ) : (
                 <Wallet className="w-4 h-4" />
               )}
@@ -527,11 +543,47 @@ function RenderPayment() {
           </div>
         )}
 
+        {/* Product Details Section */}
+        {productData.length > 0 && (
+          <div className="bg-white rounded-lg p-4 mb-4 shadow-sm">
+            <h2 className="text-lg font-medium mb-3">Items in your order</h2>
+            <div className="space-y-3">
+              {productData.map((item: StoreProduct) => (
+                <div
+                  key={item._id}
+                  className="flex items-center space-x-3 border-b pb-3 last:border-b-0 last:pb-0"
+                >
+                  <Image
+                    src={item.image}
+                    alt={item.title}
+                    width={60}
+                    height={60}
+                    className="rounded object-cover"
+                  />
+                  <div className="flex-grow">
+                    <h3 className="text-sm font-medium text-gray-800">
+                      {item.title}
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      Qty: {item.quantity}
+                    </p>
+                  </div>
+                  <div className="text-sm font-medium text-gray-800">
+                    <FormattedPrice amount={item.price * item.quantity} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-lg p-4 mb-4 shadow-sm">
           <h2 className="text-lg font-medium mb-3">Order Summary</h2>
           <div className="flex justify-between items-center text-lg">
             <span>Order Total:</span>
-            <span className="font-bold">{formatPrice(totalValue)}</span>
+            <span className="font-bold">
+              <FormattedPrice amount={totalValue} />
+            </span>
           </div>
         </div>
 
@@ -547,7 +599,7 @@ function RenderPayment() {
                     <div className="border border-gray-200 rounded-lg overflow-hidden">
                       <button
                         onClick={() => setShowBankDropdown(!showBankDropdown)}
-                        className="w-full flex items-center justify-between p-4 hover:border-orange-500 hover:bg-orange-50 transition-colors text-left"
+                        className="w-full flex items-center justify-between p-4 hover:border-amazon_yellow hover:bg-yellow-50 transition-colors text-left border border-gray-200 rounded-lg"
                       >
                         <div className="flex items-center">
                           <span className="text-2xl mr-4">{method.icon}</span>
@@ -565,7 +617,7 @@ function RenderPayment() {
                             <button
                               key={bank.id}
                               onClick={() => handleBankSelection(bank.id)}
-                              className="w-full flex items-center p-4 hover:bg-orange-50 transition-colors text-left border-b border-gray-100 last:border-b-0"
+                              className="w-full flex items-center p-4 hover:bg-yellow-50 transition-colors text-left border-b border-gray-100 last:border-b-0"
                             >
                               <div className="w-8 h-8 mr-4 flex items-center justify-center">
                                 <Image
@@ -585,7 +637,7 @@ function RenderPayment() {
                   ) : (
                     <button
                       onClick={() => initiatePaymentProcessing(method.id)} // Changed to initiatePaymentProcessing
-                      className="w-full flex items-center p-4 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-colors text-left"
+                      className="w-full flex items-center p-4 border border-gray-200 rounded-lg hover:border-amazon_yellow hover:bg-yellow-50 transition-colors text-left"
                     >
                       {method.type === "image" ? (
                         <div className="w-8 h-8 mr-4 flex items-center justify-center">
@@ -611,7 +663,7 @@ function RenderPayment() {
 
         {paymentStep === "processing" && (
           <div className="bg-white rounded-lg p-8 text-center shadow-sm">
-            <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-orange-500" />
+            <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-amazon_light" />
             <h3 className="text-lg font-medium mb-2">Processing Payment</h3>
             <p className="text-gray-600">
               {selectedPaymentMethod === "netbanking" && selectedBank ? (
@@ -747,7 +799,7 @@ function RenderPayment() {
             </p>
             <button
               onClick={() => setPaymentStep("selection")}
-              className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+              className="bg-amazon_yellow text-black py-2 px-4 rounded-lg hover:bg-yellow-500 transition-colors font-medium"
             >
               Try Again
             </button>
