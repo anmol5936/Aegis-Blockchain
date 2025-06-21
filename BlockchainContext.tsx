@@ -21,6 +21,8 @@ import {
   NotificationType,
 } from "./types";
 
+import axios from "axios";
+
 declare global {
   interface Window {
     ethereum?: any;
@@ -62,7 +64,7 @@ interface IBlockchainContext {
     address?: string
   ) => Promise<string>;
   stakingTokenInfo: { name: string; symbol: string; decimals: number } | null;
-  stakeInPool: (poolAddress: string, amount: string) => Promise<boolean>;
+  stakeInPool: (amount: string) => Promise<boolean>;
   unstakeFromPool: (poolAddress: string, lpAmount: string) => Promise<boolean>;
   getUserStakeInfo: (
     poolAddress: string,
@@ -645,8 +647,8 @@ export const StateContextProvider = ({ children }) => {
   );
 
   const stakeInPool = useCallback(
-    async (poolAddress: string, amount: string): Promise<boolean> => {
-      console.log("=== stakeInPool ===", { poolAddress, amount });
+    async (amount: string): Promise<boolean> => {
+      console.log("=== stakeInPool ===", { amount });
       if (!signer || !address) {
         addAppNotification("Please connect your wallet first", "error");
         return false;
@@ -654,57 +656,132 @@ export const StateContextProvider = ({ children }) => {
 
       try {
         setIsLoading(true);
-        const poolContract = getLiquidityPoolContract(poolAddress);
-        console.log("this is pool address ---------> ", poolAddress);
-        console.log("Pool contract:", poolContract?.address);
-        if (!poolContract) {
-          addAppNotification("Pool contract not found", "error");
+
+        // Fetch pools data from API
+        addAppNotification("Fetching pool information...", "info");
+        const response = await axios.get("http://localhost:8765/pools");
+        const poolsData = response.data;
+
+        if (!poolsData.pools || poolsData.pools.length === 0) {
+          addAppNotification("No active pools found", "error");
           setIsLoading(false);
           return false;
         }
 
-        const amountWei = ethers.utils.parseUnits(
+        // Filter only active pools
+        const activePools = poolsData.pools.filter(
+          (pool) => pool.status === "ACTIVE"
+        );
+
+        if (activePools.length === 0) {
+          addAppNotification("No active pools available for staking", "error");
+          setIsLoading(false);
+          return false;
+        }
+
+        console.log("Active pools:", activePools);
+
+        // Calculate distribution amounts based on inverse liquidity
+        const distributedAmounts = calculateDistribution(activePools, amount);
+        console.log("Distribution amounts:", distributedAmounts);
+
+        const totalAmountWei = ethers.utils.parseUnits(
           amount,
           stakingTokenInfo?.decimals || 18
         );
-        const currentAllowance = await getTokenAllowance(poolAddress);
-        const currentAllowanceWei = ethers.utils.parseUnits(
-          currentAllowance,
-          stakingTokenInfo?.decimals || 18
-        );
 
-        if (currentAllowanceWei.lt(amountWei)) {
-          addAppNotification(
-            "Insufficient token allowance. Please approve tokens first.",
-            "info"
+        // Check total allowance for all pools
+        let totalAllowanceNeeded = ethers.BigNumber.from(0);
+        for (const distribution of distributedAmounts) {
+          const amountWei = ethers.utils.parseUnits(
+            distribution.amount.toString(),
+            stakingTokenInfo?.decimals || 18
           );
-          const approvalTx = await approveToken(poolAddress, amount);
-          if (!approvalTx) {
-            setIsLoading(false);
-            return false;
+          totalAllowanceNeeded = totalAllowanceNeeded.add(amountWei);
+        }
+
+        // Check and approve tokens if needed for each pool
+        for (const distribution of distributedAmounts) {
+          const currentAllowance = await getTokenAllowance(distribution.poolId);
+          const currentAllowanceWei = ethers.utils.parseUnits(
+            currentAllowance,
+            stakingTokenInfo?.decimals || 18
+          );
+          const requiredAmountWei = ethers.utils.parseUnits(
+            distribution.amount.toString(),
+            stakingTokenInfo?.decimals || 18
+          );
+
+          if (currentAllowanceWei.lt(requiredAmountWei)) {
+            addAppNotification(
+              `Approving tokens for ${distribution.regionName} pool...`,
+              "info"
+            );
+            const approvalTx = await approveToken(
+              distribution.poolId,
+              distribution.amount.toString()
+            );
+            if (!approvalTx) {
+              setIsLoading(false);
+              return false;
+            }
           }
         }
 
-        addAppNotification("Initiating stake transaction...", "info");
-        const stakeTx = await poolContract.stake(amountWei);
-        console.log("Stake tx sent:", stakeTx.hash);
+        // Execute staking transactions for each pool
+        const stakePromises = [];
+        for (const distribution of distributedAmounts) {
+          if (distribution.amount > 0) {
+            stakePromises.push(
+              executeStakeForPool(
+                distribution.poolId,
+                distribution.amount,
+                distribution.regionName
+              )
+            );
+          }
+        }
+
         addAppNotification(
-          `Stake transaction sent. Hash: ${stakeTx.hash.substring(0, 10)}...`,
+          "Executing stake transactions across pools...",
           "info"
         );
-        await stakeTx.wait();
-        addAppNotification(`Successfully staked ${amount} tokens!`, "success");
+        const results = await Promise.allSettled(stakePromises);
+
+        // Check results
+        const successful = results.filter(
+          (result) => result.status === "fulfilled"
+        ).length;
+        const failed = results.filter(
+          (result) => result.status === "rejected"
+        ).length;
+
+        if (successful > 0) {
+          addAppNotification(
+            `Successfully staked in ${successful} pools! ${
+              failed > 0 ? `${failed} transactions failed.` : ""
+            }`,
+            successful === distributedAmounts.length ? "success" : "info"
+          );
+        } else {
+          addAppNotification("All staking transactions failed", "error");
+          setIsLoading(false);
+          return false;
+        }
+
         setIsLoading(false);
-        return true;
+        return successful > 0;
       } catch (error) {
         console.error("Staking error:", error);
         let errorMessage = "Staking failed";
-        if (error.message.includes("insufficient funds")) {
+        if (error.message?.includes("insufficient funds")) {
           errorMessage = "Insufficient funds for transaction";
-        } else if (error.message.includes("user rejected")) {
+        } else if (error.message?.includes("user rejected")) {
           errorMessage = "Transaction rejected by user";
-        } else if (error.message.includes("execution reverted")) {
+        } else if (error.message?.includes("execution reverted")) {
           errorMessage = "Transaction reverted - check pool status and balance";
+        } else if (error.message?.includes("Network Error")) {
+          errorMessage = "Failed to fetch pool data - check API connection";
         }
         addAppNotification(errorMessage, "error");
         setIsLoading(false);
@@ -721,6 +798,108 @@ export const StateContextProvider = ({ children }) => {
       addAppNotification,
     ]
   );
+
+  // Helper function to calculate distribution based on inverse liquidity
+  const calculateDistribution = (pools, totalAmount) => {
+    const totalAmountNum = parseFloat(totalAmount);
+
+    // Calculate inverse weights (pools with lower liquidity get higher weight)
+    const poolsWithWeights = pools.map((pool) => {
+      // Add 1 to avoid division by zero and ensure minimum weight
+      const inverseLiquidity = 1 / (pool.totalLiquidity + 1);
+      return {
+        ...pool,
+        weight: inverseLiquidity,
+      };
+    });
+
+    // Calculate total weight
+    const totalWeight = poolsWithWeights.reduce(
+      (sum, pool) => sum + pool.weight,
+      0
+    );
+
+    // Distribute amount based on weights
+    const distributions = poolsWithWeights.map((pool, index) => {
+      const percentage = pool.weight / totalWeight;
+      let amount = totalAmountNum * percentage;
+
+      // Round to reasonable decimal places (6 decimal places)
+      amount = Math.round(amount * 1000000) / 1000000;
+
+      return {
+        poolId: pool.id,
+        regionName: pool.regionName,
+        amount: amount,
+        percentage: (percentage * 100).toFixed(2),
+        currentLiquidity: pool.totalLiquidity,
+      };
+    });
+
+    // Ensure total distributed amount equals input amount (handle rounding)
+    const totalDistributed = distributions.reduce(
+      (sum, dist) => sum + dist.amount,
+      0
+    );
+    const difference = totalAmountNum - totalDistributed;
+
+    if (Math.abs(difference) > 0.000001) {
+      // Add the difference to the pool with the highest weight
+      const maxWeightIndex = distributions.findIndex(
+        (dist) =>
+          dist.amount === Math.max(...distributions.map((d) => d.amount))
+      );
+      distributions[maxWeightIndex].amount += difference;
+      distributions[maxWeightIndex].amount =
+        Math.round(distributions[maxWeightIndex].amount * 1000000) / 1000000;
+    }
+
+    return distributions;
+  };
+
+  // Helper function to execute stake for a specific pool
+  const executeStakeForPool = async (poolAddress, amount, regionName) => {
+    try {
+      const poolContract = getLiquidityPoolContract(poolAddress);
+      console.log(`Staking in ${regionName} pool (${poolAddress}):`, amount);
+
+      if (!poolContract) {
+        throw new Error(`Pool contract not found for ${regionName}`);
+      }
+
+      const amountWei = ethers.utils.parseUnits(
+        amount.toString(),
+        stakingTokenInfo?.decimals || 18
+      );
+
+      const stakeTx = await poolContract.stake(amountWei);
+      console.log(`Stake tx sent for ${regionName}:`, stakeTx.hash);
+
+      addAppNotification(
+        `Stake transaction sent for ${regionName}. Hash: ${stakeTx.hash.substring(
+          0,
+          10
+        )}...`,
+        "info"
+      );
+
+      await stakeTx.wait();
+
+      addAppNotification(
+        `Successfully staked ${amount} tokens in ${regionName} pool!`,
+        "success"
+      );
+
+      return { success: true, poolAddress, regionName, amount };
+    } catch (error) {
+      console.error(`Staking error for ${regionName}:`, error);
+      addAppNotification(
+        `Failed to stake in ${regionName} pool: ${error.message}`,
+        "error"
+      );
+      throw error;
+    }
+  };
 
   const unstakeFromPool = useCallback(
     async (poolAddress: string, lpAmount: string): Promise<boolean> => {

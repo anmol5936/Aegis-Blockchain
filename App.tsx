@@ -154,7 +154,7 @@ const App: React.FC = () => {
       } else {
         // Staking
         if (stakeInPool) {
-          success = await stakeInPool(poolId, amount.toString());
+          success = await stakeInPool(amount.toString());
         }
       }
 
