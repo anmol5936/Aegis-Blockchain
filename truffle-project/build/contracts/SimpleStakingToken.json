@@ -491,34 +491,20 @@
   "immutableReferences": {},
   "generatedSources": [],
   "deployedGeneratedSources": [],
-  "sourceMap": "405:3792:10:-:0;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;-1:-1:-1;;;;;405:3792:10;;;;;;;;;;:::i;:::-;;;;;;;-1:-1:-1;;;;;405:3792:10;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;;;;405:3792:10;;;;1648:13:2;405:3792:10;;;;;;;;;;;;-1:-1:-1;405:3792:10;;;;;;;;;;;;;-1:-1:-1;405:3792:10;;;;;;;;;;-1:-1:-1;405:3792:10;;;;;;;;;;;;;1648:13:2;405:3792:10;;;;;1648:13:2;405:3792:10;;;;-1:-1:-1;;;;;405:3792:10;;;;1671:17:2;405:3792:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;405:3792:10;;;;;;;;;;;;;1648:13:2;405:3792:10;;;;;1671:17:2;405:3792:10;;804:10;1273:26:0;1269:95;;3004:6;405:3792:10;;804:10;-1:-1:-1;;;;;405:3792:10;;3052:40:0;-1:-1:-1;;3052:40:0;-1:-1:-1;;;;;;405:3792:10;;;804:10;-1:-1:-1;;;;405:3792:10;;;;;;;-1:-1:-1;;;405:3792:10;;3004:6:0;405:3792:10;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;6214:21:2;405:3792:10;;;;;;;;;6214:21:2;405:3792:10;804:10;;-1:-1:-1;405:3792:10;-1:-1:-1;405:3792:10;;;-1:-1:-1;405:3792:10;;;;;;;;;;;;-1:-1:-1;7064:25:2;405:3792:10;804:10;7064:25:2;;405:3792:10;;;;;;;;;;-1:-1:-1;;;405:3792:10;;;1671:17:2;405:3792:10;;;;;;;;-1:-1:-1;405:3792:10;;1671:17:2;405:3792:10;;-1:-1:-1;405:3792:10;1269:95:0;1322:31;;;-1:-1:-1;1322:31:0;-1:-1:-1;1671:17:2;405:3792:10;;-1:-1:-1;1322:31:0;405:3792:10;;;;-1:-1:-1;405:3792:10;;;;;;;;;;1671:17:2;-1:-1:-1;405:3792:10;;-1:-1:-1;405:3792:10;;-1:-1:-1;405:3792:10;;;;;;;;;;;;;;;;;;;;;;;1671:17:2;405:3792:10;;;;;;;;;;1648:13:2;405:3792:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1671:17:2;-1:-1:-1;405:3792:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;405:3792:10;;;;;;;;;-1:-1:-1;405:3792:10;;;;;;;;-1:-1:-1;405:3792:10;;1671:17:2;405:3792:10;;-1:-1:-1;405:3792:10;;;;;;;;;;;;-1:-1:-1;405:3792:10;;1671:17:2;405:3792:10;;-1:-1:-1;405:3792:10;;;;;-1:-1:-1;405:3792:10;;;;;1648:13:2;-1:-1:-1;405:3792:10;;;;;;;-1:-1:-1;;;405:3792:10;;;;;;;;;;;;;;;;;;;;;;;;;;;1648:13:2;405:3792:10;;;;;;;;;;1648:13:2;405:3792:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1648:13:2;-1:-1:-1;405:3792:10;;;-1:-1:-1;405:3792:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;405:3792:10;;;;-1:-1:-1;405:3792:10;;;;;;;-1:-1:-1;405:3792:10;;;;;;;;;;;;-1:-1:-1;405:3792:10;;;;;;;;;-1:-1:-1;;405:3792:10;;;-1:-1:-1;;;;;405:3792:10;;;;;;;;;;:::o;:::-;;;;;;;;;;;;-1:-1:-1;;;;;405:3792:10;;;;;;;;-1:-1:-1;;405:3792:10;;;;:::i;:::-;;;;;;;;;;;;;-1:-1:-1;405:3792:10;;;;;;;;;-1:-1:-1;405:3792:10;;;;;;:::o;:::-;;;;;;;;;;;;;;;;;",
-  "deployedSourceMap": "405:3792:10:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;405:3792:10;;;;;;:::i;:::-;1500:62:0;;:::i;:::-;-1:-1:-1;;;;;405:3792:10;3917:22;;405:3792;;3004:6:0;405:3792:10;;-1:-1:-1;;;;;;405:3792:10;;;;;;;-1:-1:-1;;;;;405:3792:10;3052:40:0;-1:-1:-1;;3052:40:0;405:3792:10;;;;-1:-1:-1;;;405:3792:10;;;;;;;;;;;;;;;;;-1:-1:-1;;;405:3792:10;;;;;;;;;;;;;;;;;-1:-1:-1;;405:3792:10;;;;;;:::i;:::-;;;:::i;:::-;-1:-1:-1;;;;;405:3792:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;405:3792:10;;;;3440:5:2;405:3792:10;;:::i;:::-;3043:10;;;:::i;:::-;405:3792;;3043:10;;3440:5:2;:::i;:::-;405:3792:10;;;;;;;;;;;;;-1:-1:-1;;405:3792:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;405:3792:10;;;;;-1:-1:-1;;405:3792:10;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;;405:3792:10;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;405:3792:10;;;;1710:6:0;405:3792:10;;;-1:-1:-1;;;;;405:3792:10;;;;;;;;;;;;;;-1:-1:-1;;405:3792:10;;;;;;:::i;:::-;;;2361:10;;;:::i;:::-;-1:-1:-1;;;;;405:3792:10;;;;;;;;;;;;;;;2361:10;405:3792;;;;;;;;;2503:26;;;405:3792;;;;;;;;;;8823:4:2;2677:6:10;2361:10;;8823:4:2;;:::i;:::-;2677:6:10;:::i;:::-;405:3792;;;;;;;;;;;;;;;;-1:-1:-1;;;405:3792:10;;;;;;;;;;;;;;;;;-1:-1:-1;;;405:3792:10;;;;;;;;;;;;;-1:-1:-1;;405:3792:10;;;;1500:62:0;;:::i;:::-;3004:6;405:3792:10;;-1:-1:-1;;;;;;405:3792:10;;;;;;;-1:-1:-1;;;;;405:3792:10;3052:40:0;405:3792:10;;3052:40:0;405:3792:10;;;;;;;-1:-1:-1;;405:3792:10;;;;-1:-1:-1;;;;;405:3792:10;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;405:3792:10;;;;1985:10;;;:::i;:::-;2060:6;405:3792;;1985:10;2060:6;:::i;405:3792::-;;;;;;-1:-1:-1;;405:3792:10;;;;;;:::i;:::-;1500:62:0;;:::i;:::-;-1:-1:-1;;;;;405:3792:10;;7509:21:2;7505:91;;7634:5;405:3792:10;;;7634:5:2;;:::i;7505:91::-;7553:32;;;405:3792:10;7553:32:2;405:3792:10;;;;;7553:32:2;405:3792:10;;;;;;-1:-1:-1;;405:3792:10;;;;;;1098:9;405:3792;;;;;;;;;;;;;;;;-1:-1:-1;;405:3792:10;;;;;;:::i;:::-;;;:::i;:::-;;;3588:10;;;;:::i;:::-;-1:-1:-1;;;;;405:3792:10;;;;;;;;;;;;;;;3588:10;405:3792;;;;;;;;;;;-1:-1:-1;;10561:36:2;;10557:309;;405:3792:10;4967:5:2;;;;;:::i;10557:309::-;10617:24;;;10613:130;;9794:19;;9790:89;;3588:10:10;9892:21:2;9888:90;;4967:5;405:3792:10;;;;;;;;;;;;;;3588:10;405:3792;-1:-1:-1;405:3792:10;;;;;-1:-1:-1;405:3792:10;;;;;10557:309:2;;;9888:90;9936:31;;;405:3792:10;9936:31:2;405:3792:10;;;;;9936:31:2;9790:89;9836:32;;;405:3792:10;9836:32:2;405:3792:10;;;;;9836:32:2;10613:130;10668:60;;;;;405:3792:10;10668:60:2;3588:10:10;405:3792;;;;;;;;10668:60:2;405:3792:10;;;;;;-1:-1:-1;;405:3792:10;;;;;2908:12:2;405:3792:10;;;;;;;;;;;;;-1:-1:-1;;405:3792:10;;;;8823:4:2;405:3792:10;;:::i;:::-;;;735:10:5;;8823:4:2;:::i;405:3792:10:-;;;;;;-1:-1:-1;;405:3792:10;;;;;1837:5:2;405:3792:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;405:3792:10;;;;;-1:-1:-1;;405:3792:10;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;1837:5:2;405:3792:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::o;:::-;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;;;;405:3792:10;;;;;;:::o;:::-;;;;-1:-1:-1;;;;;405:3792:10;;;;;;:::o;1509:278::-;-1:-1:-1;;;;;405:3792:10;;-1:-1:-1;405:3792:10;;;1574:24;405:3792;;;;;;;;;;;1573:31;1569:212;;1509:278;;:::o;1569:212::-;405:3792;-1:-1:-1;405:3792:10;1574:24;405:3792;;;-1:-1:-1;405:3792:10;1653:4;405:3792;;;;;;;;7509:21:2;;7505:91;;597:16:10;7634:5:2;;;:::i;:::-;1723:47:10;405:3792;;;597:16;405:3792;;1723:47;1509:278::o;1796:162:0:-;1710:6;405:3792:10;-1:-1:-1;;;;;405:3792:10;735:10:5;1855:23:0;1851:101;;1796:162::o;1851:101::-;1901:40;;;-1:-1:-1;1901:40:0;735:10:5;1901:40:0;405:3792:10;;-1:-1:-1;1901:40:0;7965:206:2;-1:-1:-1;;;;;405:3792:10;8035:21:2;;8031:89;;8054:1;405:3792:10;;;;;;;;;;;6321:19:2;;;6317:115;;405:3792:10;7064:25:2;405:3792:10;;;;;;;;;;;;;;;6791:21:2;405:3792:10;;6791:21:2;405:3792:10;;;;;;7064:25:2;7965:206::o;6317:115::-;405:3792:10;6367:50:2;;;;;;;;405:3792:10;;;;;6367:50:2;8031:89;8079:30;;;8054:1;8079:30;8054:1;8079:30;405:3792:10;;8054:1:2;8079:30;9682:432;-1:-1:-1;;;;;405:3792:10;;9794:19:2;;9790:89;;-1:-1:-1;;;;;405:3792:10;;9892:21:2;;9888:90;;405:3792:10;10066:31:2;405:3792:10;;9811:1:2;405:3792:10;8823:4:2;405:3792:10;;;9811:1:2;405:3792:10;;-1:-1:-1;405:3792:10;;;;;-1:-1:-1;405:3792:10;;;;;;;10066:31:2;9682:432::o;5374:300::-;-1:-1:-1;;;;;405:3792:10;;5457:18:2;;5453:86;;-1:-1:-1;;;;;405:3792:10;;5552:16:2;;5548:86;;5473:1;405:3792:10;;;;;;;;;;6321:19:2;;;6317:115;;405:3792:10;;;;7064:25:2;405:3792:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;7064:25:2;5374:300::o;6317:115::-;6367:50;405:3792:10;6367:50:2;;;;;;;;405:3792:10;;;;;6367:50:2;5989:1107;6214:21;405:3792:10;;;;;;;;;;6214:21:2;405:3792:10;;;;-1:-1:-1;;;;;405:3792:10;;;;7064:25:2;;405:3792:10;;6628:16:2;405:3792:10;;;6214:21:2;405:3792:10;;6214:21:2;405:3792:10;6624:425:2;405:3792:10;;;;;7064:25:2;5989:1107::o;6624:425::-;405:3792:10;;;;;;;;;;;;;;;6624:425:2;",
-  "source": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\nimport \"@openzeppelin/contracts/token/ERC20/ERC20.sol\";\nimport \"@openzeppelin/contracts/access/Ownable.sol\";\n\n/**\n * @title SimpleStakingToken\n * @dev A simple ERC20 token for testing and development purposes\n * This token can be minted by the owner and used as a staking token\n * Automatically mints tokens to users on their first interaction\n */\ncontract SimpleStakingToken is ERC20, Ownable {\n    uint8 private _decimals;\n    mapping(address => bool) private hasReceivedInitialTokens;\n    uint256 private constant INITIAL_TOKEN_AMOUNT = 10000 * 10 ** 18; // 10,000 tokens in wei\n\n    constructor(\n        string memory name,\n        string memory symbol,\n        uint8 decimals_,\n        uint256 initialSupply\n    ) ERC20(name, symbol) Ownable(msg.sender) {\n        _decimals = decimals_;\n        _mint(msg.sender, initialSupply * 10 ** decimals_);\n    }\n\n    /**\n     * @dev Returns the number of decimals used to get its user representation.\n     */\n    function decimals() public view virtual override returns (uint8) {\n        return _decimals;\n    }\n\n    /**\n     * @dev Mints tokens to a specified address (only owner)\n     * @param to The address to mint tokens to\n     * @param amount The amount of tokens to mint (in wei)\n     */\n    function mint(address to, uint256 amount) public onlyOwner {\n        _mint(to, amount);\n    }\n\n    /**\n     * @dev Automatically mints initial tokens to the caller if they haven't received them\n     */\n    function _mintInitialTokens(address user) private {\n        if (!hasReceivedInitialTokens[user]) {\n            hasReceivedInitialTokens[user] = true;\n            _mint(user, INITIAL_TOKEN_AMOUNT);\n            emit InitialTokensMinted(user, INITIAL_TOKEN_AMOUNT);\n        }\n    }\n\n    /**\n     * @dev Burns tokens from the caller's balance\n     * @param amount The amount of tokens to burn (in wei)\n     */\n    function burn(uint256 amount) public {\n        _mintInitialTokens(msg.sender); // Mint tokens on first interaction\n        _burn(msg.sender, amount);\n    }\n\n    /**\n     * @dev Burns tokens from a specified address (requires allowance)\n     * @param from The address to burn tokens from\n     * @param amount The amount of tokens to burn (in wei)\n     */\n    function burnFrom(address from, uint256 amount) public {\n        _mintInitialTokens(msg.sender); // Mint tokens on first interaction\n        uint256 currentAllowance = allowance(from, msg.sender);\n        require(\n            currentAllowance >= amount,\n            \"ERC20: burn amount exceeds allowance\"\n        );\n\n        _approve(from, msg.sender, currentAllowance - amount);\n        _burn(from, amount);\n    }\n\n    /**\n     * @dev Overrides ERC20 transfer to include automatic minting\n     * @param recipient The address to transfer tokens to\n     * @param amount The amount of tokens to transfer (in wei)\n     */\n    function transfer(\n        address recipient,\n        uint256 amount\n    ) public virtual override returns (bool) {\n        _mintInitialTokens(msg.sender); // Mint tokens on first interaction\n        return super.transfer(recipient, amount);\n    }\n\n    /**\n     * @dev Overrides ERC20 transferFrom to include automatic minting\n     * @param sender The address to transfer tokens from\n     * @param recipient The address to transfer tokens to\n     * @param amount The amount of tokens to transfer (in wei)\n     */\n    function transferFrom(\n        address sender,\n        address recipient,\n        uint256 amount\n    ) public virtual override returns (bool) {\n        _mintInitialTokens(msg.sender); // Mint tokens on first interaction\n        return super.transferFrom(sender, recipient, amount);\n    }\n\n    /**\n     * @dev Allows the owner to transfer ownership of the contract\n     */\n    function transferOwnership(\n        address newOwner\n    ) public virtual override onlyOwner {\n        require(\n            newOwner != address(0),\n            \"Ownable: new owner is the zero address\"\n        );\n        _transferOwnership(newOwner);\n    }\n\n    /**\n     * @dev Emitted when initial tokens are minted to a user\n     */\n    event InitialTokensMinted(address indexed user, uint256 amount);\n}\n",
-  "sourcePath": "/Users/sohamsamal/Desktop/Coding/Hackathon Projects/Hackon/Ageis-Blockchain/truffle-project/contracts/SimpleStakingToken.sol",
+  "sourceMap": "417:3905:10:-:0;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;-1:-1:-1;;;;;417:3905:10;;;;;;;;;;:::i;:::-;;;;;;;-1:-1:-1;;;;;417:3905:10;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;;;;417:3905:10;;;;1648:13:2;417:3905:10;;;;;;;;;;;;-1:-1:-1;417:3905:10;;;;;;;;;;;;;-1:-1:-1;417:3905:10;;;;;;;;;;-1:-1:-1;417:3905:10;;;;;;;;;;;;;1648:13:2;417:3905:10;;;;;1648:13:2;417:3905:10;;;;-1:-1:-1;;;;;417:3905:10;;;;1671:17:2;417:3905:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;417:3905:10;;;;;;;;;;;;;1648:13:2;417:3905:10;;;;;1671:17:2;417:3905:10;;826:10;1273:26:0;1269:95;;3004:6;417:3905:10;;826:10;-1:-1:-1;;;;;417:3905:10;;3052:40:0;-1:-1:-1;;3052:40:0;-1:-1:-1;;;;;;417:3905:10;;;826:10;-1:-1:-1;;;;417:3905:10;;;;;;;-1:-1:-1;;;417:3905:10;;3004:6:0;417:3905:10;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;6214:21:2;417:3905:10;;;;;;;;;6214:21:2;417:3905:10;826:10;;-1:-1:-1;417:3905:10;-1:-1:-1;417:3905:10;;;-1:-1:-1;417:3905:10;;;;;;;;;;;;-1:-1:-1;7064:25:2;417:3905:10;826:10;7064:25:2;;417:3905:10;;;;;;;;;;-1:-1:-1;;;417:3905:10;;;1671:17:2;417:3905:10;;;;;;;;-1:-1:-1;417:3905:10;;1671:17:2;417:3905:10;;-1:-1:-1;417:3905:10;1269:95:0;1322:31;;;-1:-1:-1;1322:31:0;-1:-1:-1;1671:17:2;417:3905:10;;-1:-1:-1;1322:31:0;417:3905:10;;;;-1:-1:-1;417:3905:10;;;;;;;;;;1671:17:2;-1:-1:-1;417:3905:10;;-1:-1:-1;417:3905:10;;-1:-1:-1;417:3905:10;;;;;;;;;;;;;;;;;;;;;;;1671:17:2;417:3905:10;;;;;;;;;;1648:13:2;417:3905:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1671:17:2;-1:-1:-1;417:3905:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;417:3905:10;;;;;;;;;-1:-1:-1;417:3905:10;;;;;;;;-1:-1:-1;417:3905:10;;1671:17:2;417:3905:10;;-1:-1:-1;417:3905:10;;;;;;;;;;;;-1:-1:-1;417:3905:10;;1671:17:2;417:3905:10;;-1:-1:-1;417:3905:10;;;;;-1:-1:-1;417:3905:10;;;;;1648:13:2;-1:-1:-1;417:3905:10;;;;;;;-1:-1:-1;;;417:3905:10;;;;;;;;;;;;;;;;;;;;;;;;;;;1648:13:2;417:3905:10;;;;;;;;;;1648:13:2;417:3905:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1648:13:2;-1:-1:-1;417:3905:10;;;-1:-1:-1;417:3905:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;417:3905:10;;;;-1:-1:-1;417:3905:10;;;;;;;-1:-1:-1;417:3905:10;;;;;;;;;;;;-1:-1:-1;417:3905:10;;;;;;;;;-1:-1:-1;;417:3905:10;;;-1:-1:-1;;;;;417:3905:10;;;;;;;;;;:::o;:::-;;;;;;;;;;;;-1:-1:-1;;;;;417:3905:10;;;;;;;;-1:-1:-1;;417:3905:10;;;;:::i;:::-;;;;;;;;;;;;;-1:-1:-1;417:3905:10;;;;;;;;;-1:-1:-1;417:3905:10;;;;;;:::o;:::-;;;;;;;;;;;;;;;;;",
+  "deployedSourceMap": "417:3905:10:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;417:3905:10;;;;;;:::i;:::-;1500:62:0;;:::i;:::-;-1:-1:-1;;;;;417:3905:10;4032:22;;417:3905;;3004:6:0;417:3905:10;;-1:-1:-1;;;;;;417:3905:10;;;;;;;-1:-1:-1;;;;;417:3905:10;3052:40:0;-1:-1:-1;;3052:40:0;417:3905:10;;;;-1:-1:-1;;;417:3905:10;;;;;;;;;;;;;;;;;-1:-1:-1;;;417:3905:10;;;;;;;;;;;;;;;;;-1:-1:-1;;417:3905:10;;;;;;:::i;:::-;;;:::i;:::-;-1:-1:-1;;;;;417:3905:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;417:3905:10;;;;3440:5:2;417:3905:10;;:::i;:::-;3132:10;;;:::i;:::-;417:3905;;3132:10;;3440:5:2;:::i;:::-;417:3905:10;;;;;;;;;;;;;-1:-1:-1;;417:3905:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;417:3905:10;;;;;-1:-1:-1;;417:3905:10;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;;417:3905:10;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;417:3905:10;;;;1710:6:0;417:3905:10;;;-1:-1:-1;;;;;417:3905:10;;;;;;;;;;;;;;-1:-1:-1;;417:3905:10;;;;;;:::i;:::-;;;2430:10;;;:::i;:::-;-1:-1:-1;;;;;417:3905:10;;;;;;;;;;;;;;;2430:10;417:3905;;;;;;;;;2575:26;;;417:3905;;;;;;;;;;8823:4:2;2754:6:10;2430:10;;8823:4:2;;:::i;:::-;2754:6:10;:::i;:::-;417:3905;;;;;;;;;;;;;;;;-1:-1:-1;;;417:3905:10;;;;;;;;;;;;;;;;;-1:-1:-1;;;417:3905:10;;;;;;;;;;;;;-1:-1:-1;;417:3905:10;;;;1500:62:0;;:::i;:::-;3004:6;417:3905:10;;-1:-1:-1;;;;;;417:3905:10;;;;;;;-1:-1:-1;;;;;417:3905:10;3052:40:0;417:3905:10;;3052:40:0;417:3905:10;;;;;;;-1:-1:-1;;417:3905:10;;;;-1:-1:-1;;;;;417:3905:10;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;417:3905:10;;;;2044:10;;;:::i;:::-;2120:6;417:3905;;2044:10;2120:6;:::i;417:3905::-;;;;;;-1:-1:-1;;417:3905:10;;;;;;:::i;:::-;1500:62:0;;:::i;:::-;-1:-1:-1;;;;;417:3905:10;;7509:21:2;7505:91;;7634:5;417:3905:10;;;7634:5:2;;:::i;7505:91::-;7553:32;;;417:3905:10;7553:32:2;417:3905:10;;;;;7553:32:2;417:3905:10;;;;;;-1:-1:-1;;417:3905:10;;;;;;1129:9;417:3905;;;;;;;;;;;;;;;;-1:-1:-1;;417:3905:10;;;;;;:::i;:::-;;;:::i;:::-;;;3692:10;;;;:::i;:::-;-1:-1:-1;;;;;417:3905:10;;;;;;;;;;;;;;;3692:10;417:3905;;;;;;;;;;;-1:-1:-1;;10561:36:2;;10557:309;;417:3905:10;4967:5:2;;;;;:::i;10557:309::-;10617:24;;;10613:130;;9794:19;;9790:89;;3692:10:10;9892:21:2;9888:90;;4967:5;417:3905:10;;;;;;;;;;;;;;3692:10;417:3905;-1:-1:-1;417:3905:10;;;;;-1:-1:-1;417:3905:10;;;;;10557:309:2;;;9888:90;9936:31;;;417:3905:10;9936:31:2;417:3905:10;;;;;9936:31:2;9790:89;9836:32;;;417:3905:10;9836:32:2;417:3905:10;;;;;9836:32:2;10613:130;10668:60;;;;;417:3905:10;10668:60:2;3692:10:10;417:3905;;;;;;;;10668:60:2;417:3905:10;;;;;;-1:-1:-1;;417:3905:10;;;;;2908:12:2;417:3905:10;;;;;;;;;;;;;-1:-1:-1;;417:3905:10;;;;8823:4:2;417:3905:10;;:::i;:::-;;;735:10:5;;8823:4:2;:::i;417:3905:10:-;;;;;;-1:-1:-1;;417:3905:10;;;;;1837:5:2;417:3905:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;417:3905:10;;;;;-1:-1:-1;;417:3905:10;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;1837:5:2;417:3905:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::o;:::-;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;;;;417:3905:10;;;;;;:::o;:::-;;;;-1:-1:-1;;;;;417:3905:10;;;;;;:::o;1555:284::-;-1:-1:-1;;;;;417:3905:10;;-1:-1:-1;417:3905:10;;;1621:24;417:3905;;;;;;;;;;;1620:31;1616:216;;1555:284;;:::o;1616:216::-;417:3905;-1:-1:-1;417:3905:10;1621:24;417:3905;;;-1:-1:-1;417:3905:10;1701:4;417:3905;;;;;;;;7509:21:2;;7505:91;;612:16:10;7634:5:2;;;:::i;:::-;1773:47:10;417:3905;;;612:16;417:3905;;1773:47;1555:284::o;1796:162:0:-;1710:6;417:3905:10;-1:-1:-1;;;;;417:3905:10;735:10:5;1855:23:0;1851:101;;1796:162::o;1851:101::-;1901:40;;;-1:-1:-1;1901:40:0;735:10:5;1901:40:0;417:3905:10;;-1:-1:-1;1901:40:0;7965:206:2;-1:-1:-1;;;;;417:3905:10;8035:21:2;;8031:89;;8054:1;417:3905:10;;;;;;;;;;;6321:19:2;;;6317:115;;417:3905:10;7064:25:2;417:3905:10;;;;;;;;;;;;;;;6791:21:2;417:3905:10;;6791:21:2;417:3905:10;;;;;;7064:25:2;7965:206::o;6317:115::-;417:3905:10;6367:50:2;;;;;;;;417:3905:10;;;;;6367:50:2;8031:89;8079:30;;;8054:1;8079:30;8054:1;8079:30;417:3905:10;;8054:1:2;8079:30;9682:432;-1:-1:-1;;;;;417:3905:10;;9794:19:2;;9790:89;;-1:-1:-1;;;;;417:3905:10;;9892:21:2;;9888:90;;417:3905:10;10066:31:2;417:3905:10;;9811:1:2;417:3905:10;8823:4:2;417:3905:10;;;9811:1:2;417:3905:10;;-1:-1:-1;417:3905:10;;;;;-1:-1:-1;417:3905:10;;;;;;;10066:31:2;9682:432::o;5374:300::-;-1:-1:-1;;;;;417:3905:10;;5457:18:2;;5453:86;;-1:-1:-1;;;;;417:3905:10;;5552:16:2;;5548:86;;5473:1;417:3905:10;;;;;;;;;;6321:19:2;;;6317:115;;417:3905:10;;;;7064:25:2;417:3905:10;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;7064:25:2;5374:300::o;6317:115::-;6367:50;417:3905:10;6367:50:2;;;;;;;;417:3905:10;;;;;6367:50:2;5989:1107;6214:21;417:3905:10;;;;;;;;;;6214:21:2;417:3905:10;;;;-1:-1:-1;;;;;417:3905:10;;;;7064:25:2;;417:3905:10;;6628:16:2;417:3905:10;;;6214:21:2;417:3905:10;;6214:21:2;417:3905:10;6624:425:2;417:3905:10;;;;;7064:25:2;5989:1107::o;6624:425::-;417:3905:10;;;;;;;;;;;;;;;6624:425:2;",
+  "source": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.0;\r\n\r\nimport \"@openzeppelin/contracts/token/ERC20/ERC20.sol\";\r\nimport \"@openzeppelin/contracts/access/Ownable.sol\";\r\n\r\n/**\r\n * @title SimpleStakingToken\r\n * @dev A simple ERC20 token for testing and development purposes\r\n * This token can be minted by the owner and used as a staking token\r\n * Automatically mints tokens to users on their first interaction\r\n */\r\ncontract SimpleStakingToken is ERC20, Ownable {\r\n    uint8 private _decimals;\r\n    mapping(address => bool) private hasReceivedInitialTokens;\r\n    uint256 private constant INITIAL_TOKEN_AMOUNT = 10000 * 10 ** 18; // 10,000 tokens in wei\r\n\r\n    constructor(\r\n        string memory name,\r\n        string memory symbol,\r\n        uint8 decimals_,\r\n        uint256 initialSupply\r\n    ) ERC20(name, symbol) Ownable(msg.sender) {\r\n        _decimals = decimals_;\r\n        _mint(msg.sender, initialSupply * 10 ** decimals_);\r\n    }\r\n\r\n    /**\r\n     * @dev Returns the number of decimals used to get its user representation.\r\n     */\r\n    function decimals() public view virtual override returns (uint8) {\r\n        return _decimals;\r\n    }\r\n\r\n    /**\r\n     * @dev Mints tokens to a specified address (only owner)\r\n     * @param to The address to mint tokens to\r\n     * @param amount The amount of tokens to mint (in wei)\r\n     */\r\n    function mint(address to, uint256 amount) public onlyOwner {\r\n        _mint(to, amount);\r\n    }\r\n\r\n    /**\r\n     * @dev Automatically mints initial tokens to the caller if they haven't received them\r\n     */\r\n    function _mintInitialTokens(address user) private {\r\n        if (!hasReceivedInitialTokens[user]) {\r\n            hasReceivedInitialTokens[user] = true;\r\n            _mint(user, INITIAL_TOKEN_AMOUNT);\r\n            emit InitialTokensMinted(user, INITIAL_TOKEN_AMOUNT);\r\n        }\r\n    }\r\n\r\n    /**\r\n     * @dev Burns tokens from the caller's balance\r\n     * @param amount The amount of tokens to burn (in wei)\r\n     */\r\n    function burn(uint256 amount) public {\r\n        _mintInitialTokens(msg.sender); // Mint tokens on first interaction\r\n        _burn(msg.sender, amount);\r\n    }\r\n\r\n    /**\r\n     * @dev Burns tokens from a specified address (requires allowance)\r\n     * @param from The address to burn tokens from\r\n     * @param amount The amount of tokens to burn (in wei)\r\n     */\r\n    function burnFrom(address from, uint256 amount) public {\r\n        _mintInitialTokens(msg.sender); // Mint tokens on first interaction\r\n        uint256 currentAllowance = allowance(from, msg.sender);\r\n        require(\r\n            currentAllowance >= amount,\r\n            \"ERC20: burn amount exceeds allowance\"\r\n        );\r\n\r\n        _approve(from, msg.sender, currentAllowance - amount);\r\n        _burn(from, amount);\r\n    }\r\n\r\n    /**\r\n     * @dev Overrides ERC20 transfer to include automatic minting\r\n     * @param recipient The address to transfer tokens to\r\n     * @param amount The amount of tokens to transfer (in wei)\r\n     */\r\n    function transfer(\r\n        address recipient,\r\n        uint256 amount\r\n    ) public virtual override returns (bool) {\r\n        _mintInitialTokens(msg.sender); // Mint tokens on first interaction\r\n        return super.transfer(recipient, amount);\r\n    }\r\n\r\n    /**\r\n     * @dev Overrides ERC20 transferFrom to include automatic minting\r\n     * @param sender The address to transfer tokens from\r\n     * @param recipient The address to transfer tokens to\r\n     * @param amount The amount of tokens to transfer (in wei)\r\n     */\r\n    function transferFrom(\r\n        address sender,\r\n        address recipient,\r\n        uint256 amount\r\n    ) public virtual override returns (bool) {\r\n        _mintInitialTokens(msg.sender); // Mint tokens on first interaction\r\n        return super.transferFrom(sender, recipient, amount);\r\n    }\r\n\r\n    /**\r\n     * @dev Allows the owner to transfer ownership of the contract\r\n     */\r\n    function transferOwnership(\r\n        address newOwner\r\n    ) public virtual override onlyOwner {\r\n        require(\r\n            newOwner != address(0),\r\n            \"Ownable: new owner is the zero address\"\r\n        );\r\n        _transferOwnership(newOwner);\r\n    }\r\n\r\n    /**\r\n     * @dev Emitted when initial tokens are minted to a user\r\n     */\r\n    event InitialTokensMinted(address indexed user, uint256 amount);\r\n}\r\n",
+  "sourcePath": "C:\\Users\\nayak\\OneDrive\\Desktop\\Ageis-Blockchain\\truffle-project\\contracts\\SimpleStakingToken.sol",
   "ast": {
     "absolutePath": "project:/contracts/SimpleStakingToken.sol",
     "exportedSymbols": {
-      "Context": [
-        933
-      ],
-      "ERC20": [
-        799
-      ],
-      "IERC20": [
-        877
-      ],
-      "IERC20Errors": [
-        189
-      ],
-      "IERC20Metadata": [
-        903
-      ],
-      "Ownable": [
-        147
-      ],
-      "SimpleStakingToken": [
-        3924
-      ]
+      "Context": [933],
+      "ERC20": [799],
+      "IERC20": [877],
+      "IERC20Errors": [189],
+      "IERC20Metadata": [903],
+      "Ownable": [147],
+      "SimpleStakingToken": [3924]
     },
     "id": 3925,
     "license": "MIT",
@@ -526,12 +512,7 @@
     "nodes": [
       {
         "id": 3673,
-        "literals": [
-          "solidity",
-          "^",
-          "0.8",
-          ".0"
-        ],
+        "literals": ["solidity", "^", "0.8", ".0"],
         "nodeType": "PragmaDirective",
         "src": "32:23:10"
       },
@@ -566,9 +547,7 @@
             "baseName": {
               "id": 3677,
               "name": "ERC20",
-              "nameLocations": [
-                "436:5:10"
-              ],
+              "nameLocations": ["436:5:10"],
               "nodeType": "IdentifierPath",
               "referencedDeclaration": 799,
               "src": "436:5:10"
@@ -581,9 +560,7 @@
             "baseName": {
               "id": 3679,
               "name": "Ownable",
-              "nameLocations": [
-                "443:7:10"
-              ],
+              "nameLocations": ["443:7:10"],
               "nodeType": "IdentifierPath",
               "referencedDeclaration": 147,
               "src": "443:7:10"
@@ -604,15 +581,7 @@
         },
         "fullyImplemented": true,
         "id": 3924,
-        "linearizedBaseContracts": [
-          3924,
-          147,
-          799,
-          189,
-          903,
-          877,
-          933
-        ],
+        "linearizedBaseContracts": [3924, 147, 799, 189, 903, 877, 933],
         "name": "SimpleStakingToken",
         "nameLocation": "414:18:10",
         "nodeType": "ContractDefinition",
@@ -1041,9 +1010,7 @@
                 "modifierName": {
                   "id": 3703,
                   "name": "ERC20",
-                  "nameLocations": [
-                    "776:5:10"
-                  ],
+                  "nameLocations": ["776:5:10"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 799,
                   "src": "776:5:10"
@@ -1086,9 +1053,7 @@
                 "modifierName": {
                   "id": 3707,
                   "name": "Ownable",
-                  "nameLocations": [
-                    "796:7:10"
-                  ],
+                  "nameLocations": ["796:7:10"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 147,
                   "src": "796:7:10"
@@ -1228,9 +1193,7 @@
             "visibility": "public"
           },
           {
-            "baseFunctions": [
-              363
-            ],
+            "baseFunctions": [363],
             "body": {
               "id": 3736,
               "nodeType": "Block",
@@ -1417,9 +1380,7 @@
                 "modifierName": {
                   "id": 3744,
                   "name": "onlyOwner",
-                  "nameLocations": [
-                    "1352:9:10"
-                  ],
+                  "nameLocations": ["1352:9:10"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 58,
                   "src": "1352:9:10"
@@ -2147,9 +2108,7 @@
                   "src": "2342:30:10"
                 },
                 {
-                  "assignments": [
-                    3814
-                  ],
+                  "assignments": [3814],
                   "declarations": [
                     {
                       "constant": false,
@@ -2340,9 +2299,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "2482:7:10",
@@ -2474,10 +2431,7 @@
                       "id": 3828,
                       "name": "_approve",
                       "nodeType": "Identifier",
-                      "overloadedDeclarations": [
-                        690,
-                        750
-                      ],
+                      "overloadedDeclarations": [690, 750],
                       "referencedDeclaration": 690,
                       "src": "2602:8:10",
                       "typeDescriptions": {
@@ -2666,9 +2620,7 @@
             "visibility": "public"
           },
           {
-            "baseFunctions": [
-              409
-            ],
+            "baseFunctions": [409],
             "body": {
               "id": 3865,
               "nodeType": "Block",
@@ -2955,9 +2907,7 @@
             "visibility": "public"
           },
           {
-            "baseFunctions": [
-              482
-            ],
+            "baseFunctions": [482],
             "body": {
               "id": 3891,
               "nodeType": "Block",
@@ -3288,9 +3238,7 @@
             "visibility": "public"
           },
           {
-            "baseFunctions": [
-              126
-            ],
+            "baseFunctions": [126],
             "body": {
               "id": 3915,
               "nodeType": "Block",
@@ -3422,9 +3370,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "3896:7:10",
@@ -3526,9 +3472,7 @@
                 "modifierName": {
                   "id": 3898,
                   "name": "onlyOwner",
-                  "nameLocations": [
-                    "3876:9:10"
-                  ],
+                  "nameLocations": ["3876:9:10"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 58,
                   "src": "3876:9:10"
@@ -3675,22 +3619,8 @@
         ],
         "scope": 3925,
         "src": "405:3792:10",
-        "usedErrors": [
-          13,
-          18,
-          159,
-          164,
-          169,
-          178,
-          183,
-          188
-        ],
-        "usedEvents": [
-          24,
-          811,
-          820,
-          3923
-        ]
+        "usedErrors": [13, 18, 159, 164, 169, 178, 183, 188],
+        "usedEvents": [24, 811, 820, 3923]
       }
     ],
     "src": "32:4166:10"
@@ -3792,12 +3722,12 @@
         }
       },
       "links": {},
-      "address": "0x71CCf51D418F9583E48e26b7819a4a4c81Be8Af1",
-      "transactionHash": "0xefb298efefd89bbec4c44f4b077c40847a03041a4cb4bcaaafc65d78b13e8ef6"
+      "address": "0x7dae97104290Abca8b5b6E51786B564f8C1ec86f",
+      "transactionHash": "0xd96197f33c4b88e17c94455d060108871d9471974eaea05e5270974f68b142ea"
     }
   },
   "schemaVersion": "3.4.16",
-  "updatedAt": "2025-06-21T17:17:45.854Z",
+  "updatedAt": "2025-06-22T05:46:54.710Z",
   "networkType": "ethereum",
   "devdoc": {
     "details": "A simple ERC20 token for testing and development purposes This token can be minted by the owner and used as a staking token Automatically mints tokens to users on their first interaction",

@@ -890,6 +890,35 @@ class TransactionRouterRecoveryAgent:
         logger.info("Agent 2 shutdown complete.")
 
 # FastAPI Setup
+from fastapi import FastAPI, HTTPException, Depends
+from pydantic import BaseModel, Field
+import uvicorn
+from fastapi.middleware.cors import CORSMiddleware
+import uuid # For generating unique transaction IDs
+from typing import Optional, Dict # Ensure these are imported
+
+class StakeRequest(BaseModel):
+    poolId: str
+    amount: str
+
+class CreatePoolRequest(BaseModel):
+    regionName: str
+
+class RepayDebtRequest(BaseModel):
+    pass
+
+class InitiatePaymentRequest(BaseModel):
+    userId: str
+    merchantId: str
+    amount: float
+    selectedBank: Optional[str] = None
+    userGeoLocation: Optional[Dict] = None
+    primaryFallbackPoolId: Optional[str] = None
+
+class FallbackPayRequest(BaseModel):
+    merchantAddress: str
+    amount: str
+
 app = FastAPI(title="Agent 2 - Transaction Router & Recovery Manager API", version="1.0")
 agent_instance = None
 
@@ -1099,95 +1128,215 @@ async def fallback_pay_endpoint(request: FallbackPayRequest, agent: TransactionR
         raise HTTPException(status_code=500, detail="Service unavailable: Blockchain components not initialized")
 
     notifications = []
+    successful_transactions = []
+    
     try:
         amount_float = float(request.amount)
         if amount_float <= 0:
             raise ValueError("Amount must be positive")
+        
         decimals = agent.staking_token_contract.functions.decimals().call()
         amount_wei = int(amount_float * 10**decimals)
-        pool_address = Web3.to_checksum_address(request.primaryPoolAddress)
         merchant_address = Web3.to_checksum_address(request.merchantAddress)
-        tx_id = f"fallback_{pool_address}_{time.time()}"
-
-        pool_contract = agent._get_liquidity_pool_contract(pool_address)
-        if not pool_contract:
-            logger.error(f"No valid LiquidityPool found for poolAddress: {pool_address}")
-            notifications.append({"id": str(int(time.time() * 1000)), "message": "Invalid pool address", "type": "error"})
-            raise HTTPException(status_code=400, detail=f"No valid LiquidityPool found for poolAddress: {pool_address}")
-
+        
+        # Fetch pools from localhost:8765/pools
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get("http://localhost:8765/pools", timeout=10.0)
+                response.raise_for_status()
+                pools_data = response.json()
+                pools = pools_data.get("pools", [])
+                logger.info(f"Fetched {len(pools)} pools from API")
+        except Exception as e:
+            logger.error(f"Failed to fetch pools from API: {e}")
+            notifications.append({"id": str(int(time.time() * 1000)), "message": "Failed to fetch pools data", "type": "error"})
+            raise HTTPException(status_code=500, detail="Failed to fetch pools data")
+        
+        # Filter pools that have userStake and sort by collateralAmount in descending order
+        valid_pools = []
+        for pool in pools:
+            if pool.get("userStake") and pool["userStake"].get("collateralAmount", 0) > 0:
+                valid_pools.append(pool)
+        
+        if not valid_pools:
+            logger.error("No pools with available collateral found")
+            notifications.append({"id": str(int(time.time() * 1000)), "message": "No pools with available collateral", "type": "error"})
+            raise HTTPException(status_code=400, detail="No pools with available collateral found")
+        
+        # Sort pools by collateralAmount in descending order
+        valid_pools.sort(key=lambda x: x["userStake"]["collateralAmount"], reverse=True)
+        logger.info(f"Found {len(valid_pools)} valid pools, sorted by collateral amount")
+        
+        # Calculate total available collateral
+        total_collateral = sum(pool["userStake"]["collateralAmount"] for pool in valid_pools)
+        logger.info(f"Total available collateral: {total_collateral}, Required amount: {amount_float}")
+        
+        # Check if total amount exceeds available collateral
+        if amount_float > total_collateral:
+            error_msg = f"Can't fallback: amount ({amount_float}) is higher than total collateral available ({total_collateral})"
+            logger.error(error_msg)
+            notifications.append({"id": str(int(time.time() * 1000)), "message": error_msg, "type": "error"})
+            raise HTTPException(status_code=400, detail=error_msg)
+        
+        # Check total user token balance once
         user_balance = agent.staking_token_contract.functions.balanceOf(agent.signer_address).call()
         if user_balance < amount_wei:
-            logger.error(f"Insufficient token balance for {tx_id}: {user_balance / 10**decimals} tokens")
+            logger.error(f"Insufficient token balance: {user_balance / 10**decimals} tokens")
             notifications.append({"id": str(int(time.time() * 1000)), "message": "Insufficient token balance", "type": "error"})
             raise HTTPException(status_code=400, detail="Insufficient token balance for fallback payment")
-
-        current_allowance = agent.staking_token_contract.functions.allowance(agent.signer_address, pool_address).call()
-        if current_allowance < amount_wei:
-            logger.info(f"Insufficient allowance for {tx_id}: {current_allowance / 10**decimals} tokens")
-            notifications.append({"id": str(int(time.time() * 1000)), "message": "Insufficient token allowance. Approving tokens...", "type": "info"})
-            approve_tx_hash = agent._approve_tokens(pool_address, amount_wei, tx_id)
-            if approve_tx_hash is None:
-                logger.error(f"Failed to approve tokens for {tx_id}")
-                notifications.append({"id": str(int(time.time() * 1000)), "message": "Failed to approve tokens", "type": "error"})
-                raise HTTPException(status_code=500, detail="Failed to approve tokens for fallback payment")
-            if approve_tx_hash != "0x0":
-                logger.info(f"Approval successful for {tx_id}: {approve_tx_hash}")
-                notifications.append({"id": str(int(time.time() * 1000)), "message": f"Token approval confirmed: {approve_tx_hash[:10]}...", "type": "success"})
-
-        try:
-            pool_contract.functions.fallbackPay(merchant_address, amount_wei).call({"from": agent.signer_address})
-            logger.debug(f"FallbackPay simulation successful for {tx_id}")
-        except Exception as e:
-            logger.error(f"FallbackPay simulation failed for {tx_id}: {e}")
-            notifications.append({"id": str(int(time.time() * 1000)), "message": f"FallbackPay simulation failed: {str(e)}", "type": "error"})
-            raise HTTPException(status_code=400, detail=f"FallbackPay simulation failed: {str(e)}")
-
-        latest_block = agent.w3.eth.get_block('latest')
-        base_fee = latest_block.get('baseFeePerGas', None)
         
-        tx_params = {
-            'from': agent.signer_address,
-            'nonce': agent.w3.eth.get_transaction_count(agent.signer_address),
+        remaining_amount = amount_float
+        remaining_amount_wei = amount_wei
+        
+        # Process each pool until remaining amount is covered
+        for pool in valid_pools:
+            if remaining_amount <= 0:
+                break
+                
+            pool_id = pool["id"]
+            pool_address = Web3.to_checksum_address(pool_id)
+            collateral_amount = pool["userStake"]["collateralAmount"]
+            
+            # Calculate payment amount for this pool
+            payment_amount = min(remaining_amount, collateral_amount)
+            payment_amount_wei = int(payment_amount * 10**decimals)
+            
+            tx_id = f"fallback_{pool_address}_{time.time()}"
+            logger.info(f"Processing pool {pool_address} with payment amount: {payment_amount}")
+            
+            try:
+                # Get LiquidityPool contract
+                pool_contract = agent._get_liquidity_pool_contract(pool_address)
+                if not pool_contract:
+                    logger.warning(f"No valid LiquidityPool found for poolAddress: {pool_address}, skipping")
+                    notifications.append({"id": str(int(time.time() * 1000)), "message": f"Invalid pool contract for {pool_address[:10]}...", "type": "warning"})
+                    continue
+                
+                # Check if the function exists in the contract
+                try:
+                    # Try to get the function to verify it exists
+                    func = pool_contract.functions.fallbackPay
+                    logger.info(f"Function executeOriginalFallbackPay found for pool {pool_address}")
+                except AttributeError as e:
+                    logger.error(f"Function executeOriginalFallbackPay not found in pool {pool_address}: {e}")
+                    notifications.append({"id": str(int(time.time() * 1000)), "message": f"Function not found in pool {pool_address[:10]}...", "type": "warning"})
+                    continue
+                
+                # Check token allowance for this pool
+                current_allowance = agent.staking_token_contract.functions.allowance(agent.signer_address, pool_address).call()
+                if current_allowance < payment_amount_wei:
+                    logger.info(f"Insufficient allowance for {tx_id}: {current_allowance / 10**decimals} tokens")
+                    notifications.append({"id": str(int(time.time() * 1000)), "message": f"Approving tokens for pool {pool_address[:10]}...", "type": "info"})
+                    approve_tx_hash = agent._approve_tokens(pool_address, payment_amount_wei, tx_id)
+                    if approve_tx_hash is None:
+                        logger.error(f"Failed to approve tokens for {tx_id}, skipping pool")
+                        continue
+                    if approve_tx_hash != "0x0":
+                        logger.info(f"Approval successful for {tx_id}: {approve_tx_hash}")
+                        notifications.append({"id": str(int(time.time() * 1000)), "message": f"Token approval confirmed for pool: {approve_tx_hash[:10]}...", "type": "success"})
+                
+                # Simulate fallbackPay to catch issues
+                try:
+                    pool_contract.functions.fallbackPay(merchant_address, payment_amount_wei).call({"from": agent.signer_address})
+                    logger.debug(f"FallbackPay simulation successful for {tx_id}")
+                except Exception as e:
+                    logger.warning(f"FallbackPay simulation failed for {tx_id}: {e}, skipping pool")
+                    continue
+                
+                # Build transaction with dynamic gas parameters
+                latest_block = agent.w3.eth.get_block('latest')
+                base_fee = latest_block.get('baseFeePerGas', None)
+                
+                # Build base transaction parameters
+                tx_params = {
+                    'from': agent.signer_address,
+                    'nonce': agent.w3.eth.get_transaction_count(agent.signer_address),
+                }
+                
+                # Choose transaction type based on EIP-1559 support
+                if base_fee is not None:
+                    # EIP-1559 transaction (Type 2)
+                    max_priority_fee = agent.w3.to_wei(2, 'gwei')
+                    max_fee_per_gas = base_fee * 2 + max_priority_fee
+                    tx_params.update({
+                        'maxFeePerGas': max_fee_per_gas,
+                        'maxPriorityFeePerGas': max_priority_fee,
+                    })
+                    logger.debug(f"Using EIP-1559 transaction for {tx_id}")
+                else:
+                    # Legacy transaction (Type 0)
+                    gas_price = agent.w3.eth.gas_price
+                    tx_params['gasPrice'] = gas_price
+                    logger.debug(f"Using legacy transaction for {tx_id}")
+                
+                # Build the transaction
+                tx = pool_contract.functions.fallbackPay(merchant_address, payment_amount_wei).build_transaction(tx_params)
+                
+                # Estimate and set gas limit
+                gas_estimate = agent.w3.eth.estimate_gas(tx)
+                tx['gas'] = int(gas_estimate * 1.2)
+                logger.debug(f"Gas estimate for {tx_id}: {gas_estimate}, using {tx['gas']}")
+                
+                # Sign and send transaction
+                signed_tx = agent.w3.eth.account.sign_transaction(tx, private_key=agent.signer_private_key)
+                tx_hash = agent.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+                logger.info(f"Fallback transaction sent for {tx_id}: {tx_hash.hex()}")
+                notifications.append({"id": str(int(time.time() * 1000)), "message": f"Transaction sent to pool {pool_address[:10]}...: {tx_hash.hex()[:10]}...", "type": "info"})
+                
+                # Wait for confirmation
+                receipt = agent.w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
+                if receipt.status == 1:
+                    logger.info(f"Fallback transaction confirmed for {tx_id}: {tx_hash.hex()}")
+                    notifications.append({"id": str(int(time.time() * 1000)), "message": f"Successfully sent {payment_amount} tokens to pool {pool_address[:10]}...", "type": "success"})
+                    
+                    # Record successful transaction
+                    successful_transactions.append({
+                        "pool_address": pool_address,
+                        "amount": payment_amount,
+                        "transaction_hash": tx_hash.hex(),
+                        "gas_used": receipt.gasUsed
+                    })
+                    
+                    # Update remaining amount
+                    remaining_amount -= payment_amount
+                    remaining_amount_wei -= payment_amount_wei
+                    
+                    logger.info(f"Remaining amount after pool {pool_address}: {remaining_amount}")
+                    
+                else:
+                    logger.warning(f"Fallback transaction failed for {tx_id}: {receipt}")
+                    notifications.append({"id": str(int(time.time() * 1000)), "message": f"Transaction failed for pool {pool_address[:10]}...", "type": "warning"})
+                    continue
+                    
+            except Exception as e:
+                logger.error(f"Error processing pool {pool_address}: {str(e)}, error type: {type(e).__name__}, continuing with next pool")
+                notifications.append({"id": str(int(time.time() * 1000)), "message": f"Error with pool {pool_address[:10]}...: {str(e)}", "type": "warning"})
+                continue
+        
+        # Check if all amount was processed
+        if remaining_amount > 0.001:  # Small tolerance for floating point precision
+            logger.warning(f"Could not process full amount. Remaining: {remaining_amount}")
+            notifications.append({"id": str(int(time.time() * 1000)), "message": f"Partially completed. Remaining amount: {remaining_amount:.6f}", "type": "warning"})
+        
+        if not successful_transactions:
+            logger.error("No successful transactions were completed")
+            notifications.append({"id": str(int(time.time() * 1000)), "message": "No transactions could be completed", "type": "error"})
+            raise HTTPException(status_code=500, detail="No fallback payments could be processed")
+        
+        total_processed = sum(tx["amount"] for tx in successful_transactions)
+        total_gas_used = sum(tx["gas_used"] for tx in successful_transactions)
+        
+        return {
+            "success": True,
+            "total_amount_processed": total_processed,
+            "remaining_amount": remaining_amount,
+            "transactions_count": len(successful_transactions),
+            "transactions": successful_transactions,
+            "total_gas_used": total_gas_used,
+            "status": "completed" if remaining_amount <= 0.001 else "partially_completed",
+            "notifications": notifications
         }
         
-        if base_fee is not None:
-            max_priority_fee = agent.w3.to_wei(2, 'gwei')
-            max_fee_per_gas = base_fee * 2 + max_priority_fee
-            tx_params.update({
-                'maxFeePerGas': max_fee_per_gas,
-                'maxPriorityFeePerGas': max_priority_fee,
-            })
-            logger.debug(f"Using EIP-1559 transaction for {tx_id}")
-        else:
-            gas_price = agent.w3.eth.gas_price
-            tx_params['gasPrice'] = gas_price
-            logger.debug(f"Using legacy transaction for {tx_id}")
-        
-        tx = pool_contract.functions.fallbackPay(merchant_address, amount_wei).build_transaction(tx_params)
-        gas_estimate = agent.w3.eth.estimate_gas(tx)
-        tx['gas'] = int(gas_estimate * 1.2)
-        logger.debug(f"Gas estimate for {tx_id}: {gas_estimate}, using {tx['gas']}")
-
-        signed_tx = agent.w3.eth.account.sign_transaction(tx, private_key=agent.signer_private_key)
-        tx_hash = agent.w3.eth.send_raw_transaction(signed_tx.raw_transaction)
-        logger.info(f"Fallback transaction sent for {tx_id}: {tx_hash.hex()}")
-        notifications.append({"id": str(int(time.time() * 1000)), "message": f"Fallback transaction sent: {tx_hash.hex()[:10]}...", "type": "info"})
-
-        receipt = agent.w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
-        if receipt.status == 1:
-            logger.info(f"Fallback transaction confirmed for {tx_id}: {tx_hash.hex()}")
-            notifications.append({"id": str(int(time.time() * 1000)), "message": f"Successfully sent fallback payment of {request.amount} tokens", "type": "success"})
-            return {
-                "success": True,
-                "transaction_hash": tx_hash.hex(),
-                "gas_used": receipt.gasUsed,
-                "status": "confirmed",
-                "notifications": notifications
-            }
-        else:
-            logger.error(f"Fallback transaction failed for {tx_id}: {receipt}")
-            notifications.append({"id": str(int(time.time() * 1000)), "message": "Fallback transaction failed", "type": "error"})
-            raise HTTPException(status_code=500, detail="Fallback transaction failed")
     except ValueError as e:
         logger.error(f"Invalid input for fallback pay request: {e}", exc_info=True)
         notifications.append({"id": str(int(time.time() * 1000)), "message": f"Invalid input: {str(e)}", "type": "error"})

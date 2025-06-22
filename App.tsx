@@ -59,13 +59,16 @@ const App: React.FC = () => {
   } = useStateContext();
 
   // Navigation state
-  const [currentView, setCurrentView] = useState<'pools' | 'profile'>('pools');
+  const [currentView, setCurrentView] = useState<"pools" | "profile">("pools");
 
   // Local UI state
   const [pools, setPools] = useState<LiquidityPoolData[]>([]);
-  const [currentUserData, setCurrentUserData] = useState<UserAccount | null>(null);
+  const [currentUserData, setCurrentUserData] = useState<UserAccount | null>(
+    null
+  );
 
-  const [selectedPoolForAction, setSelectedPoolForAction] = useState<LiquidityPoolData | null>(null);
+  const [selectedPoolForAction, setSelectedPoolForAction] =
+    useState<LiquidityPoolData | null>(null);
   const [isStakeModalOpen, setIsStakeModalOpen] = useState(false);
   const [isFallbackModalOpen, setIsFallbackModalOpen] = useState(false);
   const [isRepayModalOpen, setIsRepayModalOpen] = useState(false);
@@ -99,7 +102,9 @@ const App: React.FC = () => {
       return;
     }
 
-    if (pools.find((p) => p.regionName.toLowerCase() === regionName.toLowerCase())) {
+    if (
+      pools.find((p) => p.regionName.toLowerCase() === regionName.toLowerCase())
+    ) {
       addAppNotification(
         `Pool for region ${regionName} already exists (locally). Check blockchain.`,
         "error"
@@ -115,7 +120,11 @@ const App: React.FC = () => {
     }
   };
 
-  const handleStake = async (poolId: string, amount: number, isUnstaking: boolean = false) => {
+  const handleStake = async (
+    poolId: string,
+    amount: number,
+    isUnstaking: boolean = false
+  ) => {
     if (!currentUserData || !address) {
       addAppNotification("Please connect your wallet.", "error");
       return;
@@ -138,7 +147,8 @@ const App: React.FC = () => {
         }
 
         const proportionToUnstake = amount / userStake.stakedAmount;
-        const lpTokensToUnstake = userStake.lpTokensMinted * proportionToUnstake;
+        const lpTokensToUnstake =
+          userStake.lpTokensMinted * proportionToUnstake;
 
         if (unstakeFromPool) {
           success = await unstakeFromPool(poolId, lpTokensToUnstake.toString());
@@ -177,7 +187,10 @@ const App: React.FC = () => {
     }
 
     if (!fallbackPayWithCrossPools) {
-      addAppNotification("Cross-pool fallback payment function not available.", "error");
+      addAppNotification(
+        "Cross-pool fallback payment function not available.",
+        "error"
+      );
       return;
     }
 
@@ -185,7 +198,6 @@ const App: React.FC = () => {
       addAppNotification("Analyzing cross-pool liquidity...", "info");
 
       const success = await fallbackPayWithCrossPools(
-        initialPoolId,
         merchantAddress,
         amount.toString()
       );
@@ -197,22 +209,36 @@ const App: React.FC = () => {
           setCurrentUserData(updatedUserData);
         }
         setIsFallbackModalOpen(false);
-        addAppNotification("Cross-pool payment completed successfully!", "success");
+        addAppNotification(
+          "Cross-pool payment completed successfully!",
+          "success"
+        );
       }
     } catch (error) {
       console.error("Cross-pool fallback payment error:", error);
-      addAppNotification(`Cross-pool payment failed: ${error.message}`, "error");
+      addAppNotification(
+        `Cross-pool payment failed: ${error.message}`,
+        "error"
+      );
     }
   };
 
-  const handleRepayDebt = async (poolId: string, debtIndex: number, amountToRepay: number) => {
+  const handleRepayDebt = async (
+    poolId: string,
+    debtIndex: number,
+    amountToRepay: number
+  ) => {
     if (!currentUserData) {
       addAppNotification("Please connect your wallet.", "error");
       return;
     }
 
     try {
-      const success = await repayOnChain(poolId, debtIndex, amountToRepay.toString());
+      const success = await repayOnChain(
+        poolId,
+        debtIndex,
+        amountToRepay.toString()
+      );
 
       if (success) {
         await loadBlockchainPools();
@@ -233,10 +259,16 @@ const App: React.FC = () => {
       addAppNotification("Please connect your wallet.", "error");
       return;
     }
-    addAppNotification("Distribute rewards - Blockchain interaction TBD", "info");
+    addAppNotification(
+      "Distribute rewards - Blockchain interaction TBD",
+      "info"
+    );
   }, [address, pools, addAppNotification]);
 
-  const openModal = (pool: LiquidityPoolData, modalType: "stake" | "fallback" | "repay") => {
+  const openModal = (
+    pool: LiquidityPoolData,
+    modalType: "stake" | "fallback" | "repay"
+  ) => {
     if (!address) {
       addAppNotification("Please connect your wallet first.", "error");
       return;
@@ -252,26 +284,31 @@ const App: React.FC = () => {
       addAppNotification("Please connect your wallet.", "error");
       return;
     }
-    addAppNotification(`Toggle status for ${poolId} - Blockchain interaction TBD`, "info");
+    addAppNotification(
+      `Toggle status for ${poolId} - Blockchain interaction TBD`,
+      "info"
+    );
   };
 
   // Render Profile View
-  if (currentView === 'profile') {
+  if (currentView === "profile") {
     return (
       <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
         <div className="bg-slate-800 border-b border-slate-700 px-4 md:px-6 lg:px-8 py-4">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-6">
-              <h1 className="text-2xl md:text-3xl font-bold text-sky-400">Aegis Protocol</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-sky-400">
+                Aegis Protocol
+              </h1>
               <nav className="flex items-center gap-1">
                 <button
-                  onClick={() => setCurrentView('pools')}
+                  onClick={() => setCurrentView("pools")}
                   className="px-4 py-2 text-slate-400 hover:text-white rounded-lg transition-colors"
                 >
                   Pools
                 </button>
                 <button
-                  onClick={() => setCurrentView('profile')}
+                  onClick={() => setCurrentView("profile")}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2"
                 >
                   <User size={16} />
@@ -283,7 +320,8 @@ const App: React.FC = () => {
               {address ? (
                 <div className="flex items-center gap-2">
                   <span className="text-sm bg-slate-700 px-3 py-1.5 rounded-md">
-                    {address.substring(0, 6)}...{address.substring(address.length - 4)}
+                    {address.substring(0, 6)}...
+                    {address.substring(address.length - 4)}
                   </span>
                   <button
                     onClick={disconnectWallet}
@@ -319,9 +357,21 @@ const App: React.FC = () => {
               ${n.type === "info" ? "bg-blue-600 text-white" : ""}
             `}
             >
-              {n.type === "success" && <CheckCircleIcon size={20} className="mr-2 flex-shrink-0 mt-0.5" />}
-              {n.type === "error" && <AlertTriangleIcon size={20} className="mr-2 flex-shrink-0 mt-0.5" />}
-              {n.type === "info" && <InfoIcon size={20} className="mr-2 flex-shrink-0 mt-0.5" />}
+              {n.type === "success" && (
+                <CheckCircleIcon
+                  size={20}
+                  className="mr-2 flex-shrink-0 mt-0.5"
+                />
+              )}
+              {n.type === "error" && (
+                <AlertTriangleIcon
+                  size={20}
+                  className="mr-2 flex-shrink-0 mt-0.5"
+                />
+              )}
+              {n.type === "info" && (
+                <InfoIcon size={20} className="mr-2 flex-shrink-0 mt-0.5" />
+              )}
               <span>{n.message}</span>
             </div>
           ))}
@@ -336,16 +386,18 @@ const App: React.FC = () => {
       <div className="bg-slate-800 border-b border-slate-700 px-4 md:px-6 lg:px-8 py-4">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-6">
-            <h1 className="text-2xl md:text-3xl font-bold text-sky-400">Aegis Protocol</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-sky-400">
+              Aegis Protocol
+            </h1>
             <nav className="flex items-center gap-1">
               <button
-                onClick={() => setCurrentView('pools')}
+                onClick={() => setCurrentView("pools")}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg"
               >
                 Pools
               </button>
               <button
-                onClick={() => setCurrentView('profile')}
+                onClick={() => setCurrentView("profile")}
                 className="px-4 py-2 text-slate-400 hover:text-white rounded-lg transition-colors flex items-center gap-2"
               >
                 <User size={16} />
@@ -357,7 +409,8 @@ const App: React.FC = () => {
             {address ? (
               <div className="flex items-center gap-2">
                 <span className="text-sm bg-slate-700 px-3 py-1.5 rounded-md">
-                  {address.substring(0, 6)}...{address.substring(address.length - 4)}
+                  {address.substring(0, 6)}...
+                  {address.substring(address.length - 4)}
                 </span>
                 <button
                   onClick={disconnectWallet}
@@ -391,9 +444,21 @@ const App: React.FC = () => {
             ${n.type === "info" ? "bg-blue-600 text-white" : ""}
           `}
           >
-            {n.type === "success" && <CheckCircleIcon size={20} className="mr-2 flex-shrink-0 mt-0.5" />}
-            {n.type === "error" && <AlertTriangleIcon size={20} className="mr-2 flex-shrink-0 mt-0.5" />}
-            {n.type === "info" && <InfoIcon size={20} className="mr-2 flex-shrink-0 mt-0.5" />}
+            {n.type === "success" && (
+              <CheckCircleIcon
+                size={20}
+                className="mr-2 flex-shrink-0 mt-0.5"
+              />
+            )}
+            {n.type === "error" && (
+              <AlertTriangleIcon
+                size={20}
+                className="mr-2 flex-shrink-0 mt-0.5"
+              />
+            )}
+            {n.type === "info" && (
+              <InfoIcon size={20} className="mr-2 flex-shrink-0 mt-0.5" />
+            )}
             <span>{n.message}</span>
           </div>
         ))}
@@ -401,11 +466,17 @@ const App: React.FC = () => {
 
       <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <h2 className="text-3xl md:text-4xl font-bold text-sky-400">Liquidity Pools</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-sky-400">
+            Liquidity Pools
+          </h2>
         </div>
 
         {currentUserData && (
-          <UserStats user={currentUserData} pools={pools} onRepayDebt={repayOnChain} />
+          <UserStats
+            user={currentUserData}
+            pools={pools}
+            onRepayDebt={repayOnChain}
+          />
         )}
 
         {address && (
@@ -419,7 +490,9 @@ const App: React.FC = () => {
               onClick={handleDistributeRewards}
               disabled={
                 isLoading ||
-                !pools.some((p) => p.rewardsPot > 0 && p.status === PoolStatus.ACTIVE)
+                !pools.some(
+                  (p) => p.rewardsPot > 0 && p.status === PoolStatus.ACTIVE
+                )
               }
               className="mt-4 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg text-sm px-5 py-2.5 text-center flex items-center justify-center gap-2 disabled:bg-slate-600 disabled:cursor-not-allowed"
             >
@@ -437,20 +510,33 @@ const App: React.FC = () => {
               onStake={() => openModal(pool, "stake")}
               onFallbackPay={() => openModal(pool, "fallback")}
               onRepayDebt={() => openModal(pool, "repay")}
-              onToggleStatus={address ? () => togglePoolStatus(pool.id) : undefined}
+              onToggleStatus={
+                address ? () => togglePoolStatus(pool.id) : undefined
+              }
             />
           ))}
           {isLoading && pools.length === 0 && (
-            <p className="md:col-span-3 text-center">Loading pools from blockchain...</p>
+            <p className="md:col-span-3 text-center">
+              Loading pools from blockchain...
+            </p>
           )}
           {!isLoading && pools.length === 0 && (
             <div className="md:col-span-2 lg:col-span-3 text-center py-10 bg-slate-800 rounded-xl">
-              <PlusCircleIcon size={48} className="mx-auto text-slate-500 mb-4" />
-              <p className="text-slate-400 text-lg">No liquidity pools found on the blockchain.</p>
+              <PlusCircleIcon
+                size={48}
+                className="mx-auto text-slate-500 mb-4"
+              />
+              <p className="text-slate-400 text-lg">
+                No liquidity pools found on the blockchain.
+              </p>
               {address ? (
-                <p className="text-slate-500">Use the pool management controls to create a new pool.</p>
+                <p className="text-slate-500">
+                  Use the pool management controls to create a new pool.
+                </p>
               ) : (
-                <p className="text-slate-500">Connect your wallet to create and manage pools.</p>
+                <p className="text-slate-500">
+                  Connect your wallet to create and manage pools.
+                </p>
               )}
             </div>
           )}
@@ -487,8 +573,8 @@ const App: React.FC = () => {
       )}
 
       <footer className="text-center p-4 md:p-6 text-slate-500 border-t border-slate-700">
-        Project Aegis &copy; {new Date().getFullYear()} - Blockchain Liquidity System{" "}
-        {address ? "(Connected)" : "(Disconnected)"}
+        Project Aegis &copy; {new Date().getFullYear()} - Blockchain Liquidity
+        System {address ? "(Connected)" : "(Disconnected)"}
       </footer>
     </div>
   );
