@@ -483,10 +483,16 @@ class TransactionRouterRecoveryAgent:
                             transitioned_to_up = self.set_bank_status(bank_id, status)
                             if transitioned_to_up:
                                 logger.info(f"Bank {bank_id} transitioned to UP. Checking for user debts.")
+                                # Set repayment status in Redis
+                                if self.redis_client and self.signer_address:
+                                    status_key = f"repayment_status:{self.signer_address}"
+                                    self.redis_client.set(status_key, "active", ex=300) # Expires in 5 minutes
+                                    logger.info(f"Set Redis key {status_key} to active for bank {bank_id} activation.")
+
                                 # Run debt check and repayment in a separate thread to avoid blocking
                                 debt_repay_thread = threading.Thread(
                                     target=self._check_and_repay_debts_wrapper,
-                                    args=(bank_id,),
+                                    args=(bank_id,), # Pass signer_address if needed by wrapper
                                     daemon=True,
                                     name=f"DebtRepay_{bank_id}_{time.time()}"
                                 )
@@ -504,6 +510,12 @@ class TransactionRouterRecoveryAgent:
     def _check_and_repay_debts_wrapper(self, bank_id: str):
         result = self._check_and_repay_debts(bank_id)
         logger.info(f"Debt repayment result for bank {bank_id}: {result}")
+        # Optionally, clear the status from Redis after completion or failure
+        # For now, we rely on Redis key expiry (EX 300 set earlier)
+        # if self.redis_client and self.signer_address:
+        #     status_key = f"repayment_status:{self.signer_address}"
+        #     self.redis_client.delete(status_key)
+        #     logger.info(f"Cleared Redis key {status_key} after debt repayment attempt.")
 
     def _listen_for_recovery_updates(self):
         logger.info(f"Starting recovery status listener on topic: {RECOVERY_STATUS_UPDATE_TOPIC}")
@@ -1409,6 +1421,40 @@ async def health_check(agent: TransactionRouterRecoveryAgent = Depends(get_agent
         "bank_statuses": agent.bank_statuses.copy(),
         "active_threads": threads_status
     }
+
+@app.get("/repayment-status/{user_id}")
+async def get_repayment_status(user_id: str, agent: TransactionRouterRecoveryAgent = Depends(get_agent)):
+    logger.debug(f"API request for /repayment-status/{user_id}")
+    if not agent.redis_client:
+        logger.error(f"Redis client not available for repayment status check for {user_id}")
+        raise HTTPException(status_code=503, detail="Service temporarily unavailable")
+    try:
+        # We assume user_id should match the agent's signer_address for this specific notification
+        # In a multi-user system, this would need a different approach.
+        if user_id != agent.signer_address:
+            # Or, if user_id is not meant to be the signer_address, adjust logic.
+            # For now, let's assume the frontend polls with its connected wallet address.
+            logger.warning(f"Requested user_id {user_id} does not match agent's signer_address {agent.signer_address}. This might be okay depending on frontend implementation.")
+
+        status_key = f"repayment_status:{user_id}"
+        status = agent.redis_client.get(status_key)
+
+        if status == "active":
+            logger.info(f"Repayment status for {user_id} is 'active'.")
+            # Optionally delete the key after first fetch to make it a one-time notification
+            # agent.redis_client.delete(status_key)
+            # logger.info(f"Cleared Redis key {status_key} after fetching status.")
+            return {"status": "active"}
+        else:
+            logger.info(f"Repayment status for {user_id} is 'idle' (key not found or not 'active').")
+            return {"status": "idle"}
+
+    except redis.exceptions.ConnectionError as e:
+        logger.error(f"Redis connection error for repayment status check of {user_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail="Failed to check repayment status due to Redis error")
+    except Exception as e:
+        logger.error(f"Error checking repayment status for {user_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 def run_fastapi_server():
     global agent_instance
