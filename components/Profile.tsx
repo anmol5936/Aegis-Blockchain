@@ -91,6 +91,7 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
   const [actionAmount, setActionAmount] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDistributedStaking, setIsDistributedStaking] = useState(false);
+  const [hasShownRepaymentToast, setHasShownRepaymentToast] = useState(false);
 
   // Distributed staking API call
   const stakeInPoolDistributed = async (amount: string): Promise<boolean> => {
@@ -248,6 +249,49 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
   useEffect(() => {
     loadProfileData();
   }, [loadProfileData]);
+
+  // Effect for polling repayment status
+  useEffect(() => {
+    if (!address) return;
+
+    const AGENT2_API_URL = process.env.REACT_APP_AGENT2_API_URL || 'http://localhost:8000'; // Ensure this env var is set or default is correct
+
+    const checkRepaymentStatus = async () => {
+      try {
+        const response = await fetch(`${AGENT2_API_URL}/repayment-status/${address}`);
+        if (!response.ok) {
+          // Don't show error toast for routine polling checks unless it's a persistent issue
+          console.warn(`Repayment status check failed: ${response.status}`);
+          return;
+        }
+        const data = await response.json();
+        if (data.status === "active" && !hasShownRepaymentToast) {
+          addAppNotification(
+            "A linked bank account has become active. Debt repayment process has begun.",
+            "info",
+            5000 // Show for 5 seconds
+          );
+          setHasShownRepaymentToast(true);
+        } else if (data.status === "idle" && hasShownRepaymentToast) {
+          // Reset the flag if the backend status is no longer active
+          setHasShownRepaymentToast(false);
+        }
+      } catch (error) {
+        console.error("Error polling repayment status:", error);
+        // Avoid spamming notifications for network errors during polling
+      }
+    };
+
+    // Poll every 10 seconds
+    const intervalId = setInterval(checkRepaymentStatus, 10000);
+
+    // Initial check
+    checkRepaymentStatus();
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(intervalId);
+  }, [address, addAppNotification, hasShownRepaymentToast]);
+
 
   const handleStakeUnstake = async () => {
     if (!actionAmount) {
