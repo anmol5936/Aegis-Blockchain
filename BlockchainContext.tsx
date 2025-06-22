@@ -65,7 +65,7 @@ interface IBlockchainContext {
   ) => Promise<string>;
   stakingTokenInfo: { name: string; symbol: string; decimals: number } | null;
   stakeInPool: (amount: string) => Promise<boolean>;
-  unstakeFromPool: (poolAddress: string, lpAmount: string) => Promise<boolean>;
+  unstakeFromPool: ( lpAmount: string) => Promise<boolean>;
   getUserStakeInfo: (
     poolAddress: string,
     userAddress?: string
@@ -901,27 +901,46 @@ export const StateContextProvider = ({ children }) => {
   };
 
   const unstakeFromPool = useCallback(
-    async (poolAddress: string, lpAmount: string): Promise<boolean> => {
-      console.log("=== unstakeFromPool ===", { poolAddress, lpAmount });
-      if (!signer || !address) {
-        addAppNotification("Please connect your wallet first", "error");
+  async (lpAmount: string): Promise<boolean> => {
+    console.log("=== unstakeFromPool ===", { lpAmount });
+    if (!signer || !address) {
+      addAppNotification("Please connect your wallet first", "error");
+      return false;
+    }
+
+    try {
+      setIsLoading(true);
+      const lpAmountFloat = parseFloat(lpAmount);
+      if (isNaN(lpAmountFloat) || lpAmountFloat <= 0) {
+        addAppNotification("Invalid LP token amount", "error");
+        setIsLoading(false);
         return false;
       }
 
-      try {
-        setIsLoading(true);
+      // Fetch all pools where the user has staked
+      addAppNotification("Fetching user pools for unstaking...", "info");
+      const userPools = await getAllUserPools(address);
+      if (userPools.length === 0) {
+        addAppNotification("No pools found with user stakes", "error");
+        setIsLoading(false);
+        return false;
+      }
+
+      // Get user's LP token balance and stake info for each pool
+      const poolsWithStakes = [];
+      let totalUserLPTokens = 0;
+
+      for (const poolAddress of userPools) {
         const poolContract = getLiquidityPoolContract(poolAddress);
         if (!poolContract) {
-          addAppNotification("Pool contract not found", "error");
-          setIsLoading(false);
-          return false;
+          console.warn(`Pool contract not found for ${poolAddress}`);
+          continue;
         }
 
-        const lpAmountFloat = parseFloat(lpAmount);
-        if (isNaN(lpAmountFloat) || lpAmountFloat <= 0) {
-          addAppNotification("Invalid LP token amount", "error");
-          setIsLoading(false);
-          return false;
+        const stakeInfo = await getUserStakeInfo(poolAddress, address);
+        if (!stakeInfo || stakeInfo.lpTokensMinted <= 0) {
+          console.warn(`No valid stake found for pool ${poolAddress}`);
+          continue;
         }
 
         const lpTokenAddress = await poolContract.lpToken();
@@ -931,79 +950,219 @@ export const StateContextProvider = ({ children }) => {
           signer
         );
         const userLPBalance = await lpTokenContract.balanceOf(address);
-        const lpAmountWei = ethers.utils.parseUnits(lpAmount, 18);
-        if (userLPBalance.lt(lpAmountWei)) {
-          addAppNotification("Insufficient LP tokens to unstake", "error");
-          setIsLoading(false);
-          return false;
-        }
-
-        try {
-          const canUnstake = await poolContract.unstake(address);
-          if (!canUnstake) {
-            addAppNotification(
-              "Unstaking is still in timelock period",
-              "error"
-            );
-            setIsLoading(false);
-            return false;
-          }
-        } catch (timelockError) {
-          console.warn("Could not check timelock status:", timelockError);
-        }
-
-        const gasEstimate = await poolContract.estimateGas.unstake(lpAmountWei);
-        console.log("Gas estimate for unstake:", gasEstimate.toString());
-        const gasLimit = gasEstimate.mul(120).div(100);
-
-        addAppNotification("Initiating unstake transaction...", "info");
-        const unstakeTx = await poolContract.unstake(lpAmountWei, { gasLimit });
-        console.log("Unstake tx sent:", unstakeTx.hash);
-        addAppNotification(
-          `Unstake transaction sent. Hash: ${unstakeTx.hash.substring(
-            0,
-            10
-          )}...`,
-          "info"
+        const userLPBalanceFloat = parseFloat(
+          ethers.utils.formatUnits(userLPBalance, 18)
         );
-        const receipt = await unstakeTx.wait();
 
-        if (receipt.status === 1) {
-          addAppNotification(
-            `Successfully unstaked ${lpAmount} LP tokens!`,
-            "success"
-          );
-          setIsLoading(false);
-          return true;
-        } else {
-          addAppNotification("Unstake transaction failed", "error");
-          setIsLoading(false);
-          return false;
+        if (userLPBalanceFloat > 0) {
+          poolsWithStakes.push({
+            poolId: poolAddress,
+            regionName: stakeInfo.regionName || `Pool ${poolAddress.substring(0, 8)}...`,
+            lpBalance: userLPBalanceFloat,
+            lpBalanceWei: userLPBalance,
+            stakeInfo,
+            poolContract,
+            lpTokenContract,
+          });
+          totalUserLPTokens += userLPBalanceFloat;
         }
-      } catch (error) {
-        console.error("Unstaking error:", error);
-        let errorMessage = "Unstaking failed";
-        if (error.code === -32603) {
-          errorMessage = "RPC error - check network connection and try again";
-        } else if (error.message.includes("insufficient funds")) {
-          errorMessage = "Insufficient LP tokens to unstake";
-        } else if (error.message.includes("user rejected")) {
-          errorMessage = "Transaction rejected by user";
-        } else if (error.message.includes("execution reverted")) {
-          const match = error.message.match(/execution reverted: (.+)/);
-          errorMessage = match
-            ? `Transaction reverted: ${match[1]}`
-            : "Transaction reverted - check timelock and LP balance";
-        } else if (error.reason) {
-          errorMessage = `Transaction failed: ${error.reason}`;
-        }
-        addAppNotification(errorMessage, "error");
+      }
+
+      if (poolsWithStakes.length === 0) {
+        addAppNotification("No pools with LP tokens available for unstaking", "error");
         setIsLoading(false);
         return false;
       }
-    },
-    [signer, address, getLiquidityPoolContract, addAppNotification]
-  );
+
+      if (totalUserLPTokens < lpAmountFloat) {
+        addAppNotification(
+          `Insufficient LP tokens. Available: ${totalUserLPTokens}, Requested: ${lpAmount}`,
+          "error"
+        );
+        setIsLoading(false);
+        return false;
+      }
+
+      // Calculate distribution based on proportional LP token balances
+      const distributedAmounts = poolsWithStakes.map((pool) => {
+        const proportion = pool.lpBalance / totalUserLPTokens;
+        let amount = lpAmountFloat * proportion;
+        // Round to 6 decimal places to avoid precision issues
+        amount = Math.round(amount * 1000000) / 1000000;
+
+        return {
+          poolId: pool.poolId,
+          regionName: pool.regionName,
+          amount: amount,
+          amountWei: ethers.utils.parseUnits(amount.toString(), 18),
+          lpBalance: pool.lpBalance,
+          poolContract: pool.poolContract,
+          lpTokenContract: pool.lpTokenContract,
+        };
+      });
+
+      // Adjust for rounding errors
+      const totalDistributed = distributedAmounts.reduce(
+        (sum, dist) => sum + dist.amount,
+        0
+      );
+      const difference = lpAmountFloat - totalDistributed;
+      if (Math.abs(difference) > 0.000001) {
+        const maxAmountIndex = distributedAmounts.findIndex(
+          (dist) => dist.amount === Math.max(...distributedAmounts.map((d) => d.amount))
+        );
+        distributedAmounts[maxAmountIndex].amount += difference;
+        distributedAmounts[maxAmountIndex].amount =
+          Math.round(distributedAmounts[maxAmountIndex].amount * 1000000) / 1000000;
+        distributedAmounts[maxAmountIndex].amountWei = ethers.utils.parseUnits(
+          distributedAmounts[maxAmountIndex].amount.toString(),
+          18
+        );
+      }
+
+      console.log("Distribution amounts for unstaking:", distributedAmounts);
+
+      // Execute unstake transactions for each pool
+      const unstakePromises = [];
+      for (const distribution of distributedAmounts) {
+        if (distribution.amount > 0) {
+          unstakePromises.push(
+            executeUnstakeForPool(
+              distribution.poolId,
+              distribution.amount,
+              distribution.amountWei,
+              distribution.regionName,
+              distribution.poolContract
+            )
+          );
+        }
+      }
+
+      if (unstakePromises.length === 0) {
+        addAppNotification("No valid unstake amounts to process", "error");
+        setIsLoading(false);
+        return false;
+      }
+
+      addAppNotification(
+        "Executing unstake transactions across pools...",
+        "info"
+      );
+      const results = await Promise.allSettled(unstakePromises);
+
+      // Check results
+      const successful = results.filter(
+        (result) => result.status === "fulfilled"
+      ).length;
+      const failed = results.filter(
+        (result) => result.status === "rejected"
+      ).length;
+
+      if (successful > 0) {
+        addAppNotification(
+          `Successfully unstaked from ${successful} pools! ${
+            failed > 0 ? `${failed} transactions failed.` : ""
+          }`,
+          successful === distributedAmounts.length ? "success" : "info"
+        );
+      } else {
+        addAppNotification("All unstake transactions failed", "error");
+        setIsLoading(false);
+        return false;
+      }
+
+      setIsLoading(false);
+      return successful > 0;
+    } catch (error) {
+      console.error("Unstaking error:", error);
+      let errorMessage = "Unstaking failed";
+      if (error.message?.includes("insufficient funds")) {
+        errorMessage = "Insufficient LP tokens for transaction";
+      } else if (error.message?.includes("user rejected")) {
+        errorMessage = "Transaction rejected by user";
+      } else if (error.message?.includes("execution reverted")) {
+        errorMessage = "Transaction reverted - check timelock and LP balance";
+      } else if (error.message?.includes("Network Error")) {
+        errorMessage = "Failed to fetch pool data - check network connection";
+      }
+      addAppNotification(errorMessage, "error");
+      setIsLoading(false);
+      return false;
+    }
+  },
+  [
+    signer,
+    address,
+    getLiquidityPoolContract,
+    getAllUserPools,
+    getUserStakeInfo,
+    addAppNotification,
+  ]
+);
+
+// Helper function to execute unstake for a specific pool
+const executeUnstakeForPool = async (
+  poolAddress: string,
+  amount: number,
+  amountWei: ethers.BigNumber,
+  regionName: string,
+  poolContract: ethers.Contract
+) => {
+  try {
+    console.log(`Unstaking from ${regionName} pool (${poolAddress}):`, amount);
+
+    // Check timelock (if applicable)
+    try {
+      const canUnstake = await poolContract.canUnstake(address);
+      if (!canUnstake) {
+        throw new Error("Unstaking is still in timelock period");
+      }
+    } catch (timelockError) {
+      console.warn(`Could not check timelock status for ${regionName}:`, timelockError);
+    }
+
+    // Estimate gas
+    const gasEstimate = await poolContract.estimateGas.unstake(amountWei);
+    console.log(`Gas estimate for ${regionName}:`, gasEstimate.toString());
+    const gasLimit = gasEstimate.mul(120).div(100); // 20% buffer
+
+    addAppNotification(
+      `Initiating unstake transaction for ${regionName}...`,
+      "info"
+    );
+    const unstakeTx = await poolContract.unstake(amountWei, { gasLimit });
+    console.log(`Unstake tx sent for ${regionName}:`, unstakeTx.hash);
+
+    addAppNotification(
+      `Unstake transaction sent for ${regionName}. Hash: ${unstakeTx.hash.substring(
+        0,
+        10
+      )}...`,
+      "info"
+    );
+
+    await unstakeTx.wait();
+
+    addAppNotification(
+      `Successfully unstaked ${amount} LP tokens from ${regionName} pool!`,
+      "success"
+    );
+
+    return { success: true, poolAddress, regionName, amount };
+  } catch (error) {
+    console.error(`Unstaking error for ${regionName}:`, error);
+    let errorMessage = `Failed to unstake from ${regionName} pool: ${error.message}`;
+    if (error.message.includes("timelock")) {
+      errorMessage = `Unstaking from ${regionName} is still in timelock period`;
+    } else if (error.message.includes("insufficient")) {
+      errorMessage = `Insufficient LP tokens in ${regionName} pool`;
+    } else if (error.message.includes("reverted")) {
+      errorMessage = `Transaction reverted for ${regionName} - check contract state`;
+    }
+    addAppNotification(errorMessage, "error");
+    throw error;
+  }
+};
 
   const createPoolOnChain = useCallback(
     async (
