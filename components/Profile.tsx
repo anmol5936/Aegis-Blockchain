@@ -97,6 +97,8 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
     try {
       setIsDistributedStaking(true);
       
+      // You may need to adjust this URL based on your API server configuration
+      // Common patterns: 'http://localhost:8000/stakeInPoolDistributed' or '/api/stakeInPoolDistributed'
       const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
       
       console.log('Making API call to:', `${apiUrl}/stakeInPoolDistributed`);
@@ -113,12 +115,14 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
       if (!response.ok) {
         let errorMessage = 'Distributed staking failed';
         
+        // Check if response has content before trying to parse JSON
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           try {
             const errorData = await response.json();
             errorMessage = errorData.detail || errorMessage;
           } catch (jsonError) {
+            // If JSON parsing fails, use status text
             errorMessage = `HTTP ${response.status}: ${response.statusText}`;
           }
         } else {
@@ -128,6 +132,7 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
         throw new Error(errorMessage);
       }
 
+      // Check if response has content before parsing JSON
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         throw new Error('Expected JSON response from server');
@@ -147,6 +152,7 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
           'warning'
         );
         
+        // Show details of failed stakes
         result.failed_stakes.forEach(failure => {
           addAppNotification(
             `Failed to stake ${failure.amount} in pool ${failure.poolId}: ${failure.error}`,
@@ -176,8 +182,10 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
     try {
       setIsRefreshing(true);
 
+      // Create user object for the stats calculation
       const user: User = { id: address };
 
+      // Calculate user stats using the provided logic
       const userStats = pools.reduce(
         (acc, pool) => {
           const userStake = pool.stakers.find((s) => s.userId === user.id);
@@ -197,6 +205,7 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
         }
       );
 
+      // Calculate rewards and participations
       let totalRewards = 0;
       const participations: PoolParticipation[] = [];
 
@@ -211,7 +220,7 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
           const collateralAmount = userStake?.collateralAmount || 0;
           const lpTokens = userStake?.lpTokensMinted || 0;
 
-          totalRewards += (stakedAmount * pool.apy) / 100;
+          totalRewards += (stakedAmount * pool.apy) / 100; // Simplified reward calculation
 
           participations.push({
             poolId: pool.id,
@@ -225,6 +234,7 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
         }
       });
 
+      // Net worth is the sum of all staked amounts (as per your requirement)
       const netWorth = userStats.totalStaked;
 
       setProfileStats({
@@ -255,6 +265,7 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
       return;
     }
 
+
     const amount = parseFloat(actionAmount);
     if (isNaN(amount) || amount <= 0) {
       addAppNotification("Please enter a valid amount", "error");
@@ -264,8 +275,10 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
     try {
       let success = false;
       if (selectedAction === "stake") {
+        // Use distributed staking - no pool selection needed
         success = await stakeInPoolDistributed(amount.toString());
       } else {
+        // Unstaking still requires specific pool selection
         success = await unstakeFromPool(amount.toString());
       }
 
@@ -276,10 +289,6 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
       }
     } catch (error) {
       console.error("Stake/Unstake error:", error);
-      addAppNotification(
-        `Error during ${selectedAction}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        "error"
-      );
     }
   };
 
@@ -291,11 +300,11 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
       }
     } catch (error) {
       console.error("Repay debt error:", error);
-      addAppNotification("Failed to repay debt", "error");
     }
   };
 
   const handleClaimRewards = async () => {
+    // This would integrate with a reward claiming function
     addAppNotification("Reward claiming functionality coming soon!", "info");
   };
 
@@ -433,7 +442,7 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
               className="flex items-center gap-2 p-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-white text-sm transition-colors"
             >
               <Minus className="w-4 h-4" />
-              Unstake Tokens (Distributed)
+              Unstake Tokens
             </button>
 
             <button
@@ -451,9 +460,11 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
             <div className="bg-slate-700 rounded-lg p-4 border border-slate-600">
               <h3 className="text-base font-semibold text-white mb-4 capitalize">
                 {selectedAction} Tokens
-                <span className="text-sm font-normal text-slate-400 ml-2">
-                  (Auto-distributed across pools)
-                </span>
+                {selectedAction === "stake" && (
+                  <span className="text-sm font-normal text-slate-400 ml-2">
+                    (Auto-distributed across pools)
+                  </span>
+                )}
               </h3>
 
               <div className="space-y-4">
@@ -469,21 +480,28 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
                     placeholder="0.00"
                     className="w-full p-2 bg-slate-800 border border-slate-600 rounded text-white text-sm focus:ring-1 focus:ring-slate-500 focus:border-slate-500"
                   />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Amount will be automatically distributed across {selectedAction === "stake" ? "active pools using inverse liquidity strategy" : "your staked pools based on LP token balances"}
-                  </p>
+                  {selectedAction === "stake" && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      Amount will be automatically distributed across active pools using inverse liquidity strategy
+                    </p>
+                  )}
                 </div>
 
                 {/* Action buttons */}
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleStakeUnstake}
-                    disabled={!actionAmount || isLoading || isDistributedStaking}
+                    disabled={
+                      !actionAmount || 
+                      (selectedAction === "unstake" ) ||
+                      isLoading || 
+                      isDistributedStaking
+                    }
                     className="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 disabled:bg-slate-800 rounded text-white text-sm font-medium transition-colors disabled:cursor-not-allowed"
                   >
                     {isLoading || isDistributedStaking
                       ? "Processing..."
-                      : `Distribute & ${selectedAction === "stake" ? "Stake" : "Unstake"}`}
+                      : `${selectedAction === "stake" ? "Distribute & Stake" : "Unstake"}`}
                   </button>
                   <button
                     onClick={() => {
