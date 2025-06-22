@@ -3792,12 +3792,12 @@
         }
       },
       "links": {},
-      "address": "0x833DA43A2b9DEcdc3b83d3bA6D22D04Aa25a7EB2",
-      "transactionHash": "0x0918fecaa9248307c995fc10452a86b059af7a42a3d00a40b0ada3765f95fc78"
+      "address": "0x5D90020BD5BC73F234555160e6Bf42afE69291d9",
+      "transactionHash": "0xf3e6e9ef7311f93650258d76246765f6151b50b7b4798dd2131dfed56c8c51e0"
     }
   },
   "schemaVersion": "3.4.16",
-  "updatedAt": "2025-06-22T12:49:50.531Z",
+  "updatedAt": "2025-06-22T14:26:20.148Z",
   "networkType": "ethereum",
   "devdoc": {
     "details": "A simple ERC20 token for testing and development purposes This token can be minted by the owner and used as a staking token Automatically mints tokens to users on their first interaction",

@@ -537,7 +537,6 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
                     onClick={handleStakeUnstake}
                     disabled={
                       !actionAmount || 
-                      (selectedAction === "unstake" ) ||
                       isLoading || 
                       isDistributedStaking
                     }

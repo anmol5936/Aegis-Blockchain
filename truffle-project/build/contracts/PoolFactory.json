@@ -4809,12 +4809,12 @@
         "CrossPoolLib": "0x1b273e3E72fDc8B2eC58a8c3221aAC418aA1Aa27",
         "DebtLib": "0x2716a0F8e3Fc521294C736604f72AF1f0AF1440f"
       },
-      "address": "0xfd214C10ED41493a2f36A3E95d826369eD084046",
-      "transactionHash": "0x183b30efcb05cabfd846caa8ad1b9aa59acf45dce0b5f3364606386cffb6f58f"
+      "address": "0xaB60963B2Fd7c36f5D1350600ad92630C4abe0e0",
+      "transactionHash": "0xef794d1208fbe28accf055a6f69fe8d4b40da06b86559de8addd959f3bba859a"
     }
   },
   "schemaVersion": "3.4.16",
-  "updatedAt": "2025-06-22T12:49:50.524Z",
+  "updatedAt": "2025-06-22T14:26:20.138Z",
   "networkType": "ethereum",
   "devdoc": {
     "details": "Factory contract for creating and managing regional liquidity pools",

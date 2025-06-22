@@ -1,23 +1,23 @@
 {
   "network": "development",
-  "timestamp": "2025-06-22T12:49:50.447Z",
+  "timestamp": "2025-06-22T14:26:20.028Z",
   "contracts": {
-    "POOL_FACTORY_ADDRESS": "0xfd214C10ED41493a2f36A3E95d826369eD084046",
-    "STAKING_TOKEN_ADDRESS": "0x833DA43A2b9DEcdc3b83d3bA6D22D04Aa25a7EB2",
-    "CROSS_POOL_LIB_ADDRESS": "0x42BCA5D928d59d32188Be9ee408f59eD81818079",
-    "DEBT_LIB_ADDRESS": "0x226e683CB2a95ddE1f43B0E72E674D982e70c24D",
+    "POOL_FACTORY_ADDRESS": "0xaB60963B2Fd7c36f5D1350600ad92630C4abe0e0",
+    "STAKING_TOKEN_ADDRESS": "0x5D90020BD5BC73F234555160e6Bf42afE69291d9",
+    "CROSS_POOL_LIB_ADDRESS": "0xCbeAccD2fD7482cD1CA8d3B945D6c7a9A92Ca2df",
+    "DEBT_LIB_ADDRESS": "0xe8A4F7f71A75E2b0076a2c9E65453bBeaC9893ef",
     "DEMO_POOLS": [
       {
         "region": "Mumbai",
-        "address": "0x5b4C8Fdcfeb2974725B518997e0ba4c0953783C6"
+        "address": "0x450238e2f13268DB8B2F3420E0592D26A6C89D52"
       },
       {
         "region": "Delhi",
-        "address": "0xaBf2626347Fd539e5D417A2C6310Fe4F2451fddF"
+        "address": "0x2EDF7F480CEf81Bb52519cA8aEed8Ea85f35998d"
       },
       {
         "region": "Bangalore",
-        "address": "0xB101499ecF81bebB15395E779b2b62652E1f8424"
+        "address": "0xD4bbC5B01228a6f7b98E9d73d2250e166290BB45"
       }
     ]
   },
