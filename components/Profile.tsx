@@ -18,7 +18,19 @@ import {
   Coins,
   Shield,
   Target,
+  Briefcase, // Added for Bank Activity
 } from "lucide-react";
+
+// --- New Interfaces for Bank Activity ---
+interface BankActivityHour {
+  hour: number;
+  isActive: boolean;
+}
+
+interface BankActivityScheduleResponse {
+  schedule: BankActivityHour[];
+  lastUpdated: string;
+}
 
 interface ProfileStats {
   totalCollateral: number;
@@ -92,6 +104,42 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDistributedStaking, setIsDistributedStaking] = useState(false);
   const [hasShownRepaymentToast, setHasShownRepaymentToast] = useState(false);
+
+  // --- State for Bank Activity ---
+  const [bankActivitySchedule, setBankActivitySchedule] = useState<BankActivityHour[]>([]);
+  const [isBankActivityLoading, setIsBankActivityLoading] = useState(true);
+  const [bankActivityError, setBankActivityError] = useState<string | null>(null);
+
+
+  // --- Fetch Bank Activity Data ---
+  useEffect(() => {
+    const fetchBankActivity = async () => {
+      setIsBankActivityLoading(true);
+      setBankActivityError(null);
+      try {
+        // Default to localhost:8001 if env var not set (Agent 1's default port)
+        const agent1ApiUrl = process.env.REACT_APP_AGENT1_API_URL || 'http://localhost:8001';
+        const response = await fetch(`${agent1ApiUrl}/bank-activity-schedule`);
+        if (!response.ok) {
+          const errorData = await response.text();
+          throw new Error(`Failed to fetch bank activity: ${response.status} ${errorData || response.statusText}`);
+        }
+        const data: BankActivityScheduleResponse = await response.json();
+        setBankActivitySchedule(data.schedule);
+      } catch (error) {
+        console.error("Error fetching bank activity:", error);
+        setBankActivityError(error instanceof Error ? error.message : "Unknown error fetching bank activity");
+        setBankActivitySchedule([]); // Clear schedule on error
+      } finally {
+        setIsBankActivityLoading(false);
+      }
+    };
+
+    fetchBankActivity();
+    // Re-fetch bank activity periodically (e.g., every 5 minutes) or allow manual refresh
+    const intervalId = setInterval(fetchBankActivity, 5 * 60 * 1000); // every 5 minutes
+    return () => clearInterval(intervalId);
+  }, []);
 
   // Distributed staking API call
   const stakeInPoolDistributed = async (amount: string): Promise<boolean> => {
@@ -559,6 +607,53 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Bank Activity Insights */}
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
+          <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+            <Briefcase className="w-5 h-5 text-slate-400" />
+            Bank Operational Hours (Today)
+          </h2>
+          {isBankActivityLoading ? (
+            <div className="flex items-center justify-center h-32">
+              <RefreshCw className="w-6 h-6 text-slate-500 animate-spin mr-2" />
+              <p className="text-slate-400">Loading bank activity...</p>
+            </div>
+          ) : bankActivityError ? (
+            <div className="flex items-center justify-center h-32">
+              <AlertTriangle className="w-6 h-6 text-red-500 mr-2" />
+              <p className="text-red-400">Error: {bankActivityError}</p>
+            </div>
+          ) : bankActivitySchedule.length > 0 ? (
+            <div className="flex space-x-1 h-24 items-end">
+              {bankActivitySchedule.map((activity) => (
+                <div
+                  key={activity.hour}
+                  className="relative flex-1 group"
+                  title={`${activity.hour}:00 - ${activity.hour + 1}:00: ${activity.isActive ? 'Active' : 'Inactive'}`}
+                >
+                  <div
+                    className={`w-full rounded-t-sm transition-all duration-300 ease-in-out ${
+                      activity.isActive ? 'bg-green-500' : 'bg-slate-600'
+                    }`}
+                    style={{
+                      height: activity.isActive ? `${(activity.hour % 12 + 1) * 6 + 30}%` : '30%', // Just for varied heights, not meaningful
+                      minHeight: '10px' // Ensure a minimum visible height
+                    }}
+                  />
+                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-xs text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {activity.hour % 12 === 0 ? 12 : activity.hour % 12}{activity.hour < 12 || activity.hour === 23 ? 'a' : 'p'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-slate-400 text-center">No bank activity data available.</p>
+          )}
+           <p className="text-xs text-slate-500 mt-3 text-center">
+            Visual representation of typical bank operational status throughout the day. Fetched from Agent 1.
+          </p>
         </div>
 
         {/* Pool Participations */}
