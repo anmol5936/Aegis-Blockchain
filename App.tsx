@@ -344,7 +344,7 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        <Profile />
+        <Profile pools={pools} />
 
         {/* Notifications */}
         <div className="fixed top-20 right-5 z-50 space-y-2 w-full max-w-xs sm:max-w-sm">
