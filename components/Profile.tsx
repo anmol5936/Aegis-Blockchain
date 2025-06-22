@@ -106,10 +106,13 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
   const [hasShownRepaymentToast, setHasShownRepaymentToast] = useState(false);
 
   // --- State for Bank Activity ---
-  const [bankActivitySchedule, setBankActivitySchedule] = useState<BankActivityHour[]>([]);
+  const [bankActivitySchedule, setBankActivitySchedule] = useState<
+    BankActivityHour[]
+  >([]);
   const [isBankActivityLoading, setIsBankActivityLoading] = useState(true);
-  const [bankActivityError, setBankActivityError] = useState<string | null>(null);
-
+  const [bankActivityError, setBankActivityError] = useState<string | null>(
+    null
+  );
 
   // --- Fetch Bank Activity Data ---
   useEffect(() => {
@@ -118,17 +121,26 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
       setBankActivityError(null);
       try {
         // Default to localhost:8001 if env var not set (Agent 1's default port)
-        const agent1ApiUrl = process.env.REACT_APP_AGENT1_API_URL || 'http://localhost:8001';
+        const agent1ApiUrl =
+          process.env.REACT_APP_AGENT1_API_URL || "http://localhost:8001";
         const response = await fetch(`${agent1ApiUrl}/bank-activity-schedule`);
         if (!response.ok) {
           const errorData = await response.text();
-          throw new Error(`Failed to fetch bank activity: ${response.status} ${errorData || response.statusText}`);
+          throw new Error(
+            `Failed to fetch bank activity: ${response.status} ${
+              errorData || response.statusText
+            }`
+          );
         }
         const data: BankActivityScheduleResponse = await response.json();
         setBankActivitySchedule(data.schedule);
       } catch (error) {
         console.error("Error fetching bank activity:", error);
-        setBankActivityError(error instanceof Error ? error.message : "Unknown error fetching bank activity");
+        setBankActivityError(
+          error instanceof Error
+            ? error.message
+            : "Unknown error fetching bank activity"
+        );
         setBankActivitySchedule([]); // Clear schedule on error
       } finally {
         setIsBankActivityLoading(false);
@@ -145,28 +157,28 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
   const stakeInPoolDistributed = async (amount: string): Promise<boolean> => {
     try {
       setIsDistributedStaking(true);
-      
+
       // You may need to adjust this URL based on your API server configuration
       // Common patterns: 'http://localhost:8000/stakeInPoolDistributed' or '/api/stakeInPoolDistributed'
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-      
-      console.log('Making API call to:', `${apiUrl}/stakeInPoolDistributed`);
+      const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:8000";
+
+      console.log("Making API call to:", `${apiUrl}/stakeInPoolDistributed`);
       const response = await fetch(`${apiUrl}/stakeInPoolDistributed`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          amount: amount
+          amount: amount,
         }),
       });
 
       if (!response.ok) {
-        let errorMessage = 'Distributed staking failed';
-        
+        let errorMessage = "Distributed staking failed";
+
         // Check if response has content before trying to parse JSON
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
           try {
             const errorData = await response.json();
             errorMessage = errorData.detail || errorMessage;
@@ -177,47 +189,49 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
         } else {
           errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         }
-        
+
         throw new Error(errorMessage);
       }
 
       // Check if response has content before parsing JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Expected JSON response from server');
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Expected JSON response from server");
       }
 
       const result: DistributedStakeResponse = await response.json();
-      
-      if (result.status === 'success') {
+
+      if (result.status === "success") {
         addAppNotification(
           `Successfully distributed ${result.total_amount_distributed} tokens across ${result.successful_stakes.length} pools`,
-          'success'
+          "success"
         );
         return true;
-      } else if (result.status === 'partial_success') {
+      } else if (result.status === "partial_success") {
         addAppNotification(
           `Partially successful: ${result.successful_stakes.length} stakes succeeded, ${result.failed_stakes.length} failed`,
-          'warning'
+          "warning"
         );
-        
+
         // Show details of failed stakes
-        result.failed_stakes.forEach(failure => {
+        result.failed_stakes.forEach((failure) => {
           addAppNotification(
             `Failed to stake ${failure.amount} in pool ${failure.poolId}: ${failure.error}`,
-            'error'
+            "error"
           );
         });
-        
+
         return result.successful_stakes.length > 0;
       } else {
-        throw new Error('All stakes failed');
+        throw new Error("All stakes failed");
       }
     } catch (error) {
-      console.error('Distributed staking error:', error);
+      console.error("Distributed staking error:", error);
       addAppNotification(
-        `Distributed staking failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        'error'
+        `Distributed staking failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+        "error"
       );
       return false;
     } finally {
@@ -309,14 +323,18 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
   }, [loadProfileData]);
 
   // Effect for polling repayment status
+
   useEffect(() => {
     if (!address) return;
 
-    const AGENT2_API_URL = process.env.REACT_APP_AGENT2_API_URL || 'http://localhost:8000'; // Ensure this env var is set or default is correct
+    const AGENT2_API_URL =
+      process.env.REACT_APP_AGENT2_API_URL || "http://localhost:8000"; // Ensure this env var is set or default is correct
 
     const checkRepaymentStatus = async () => {
       try {
-        const response = await fetch(`${AGENT2_API_URL}/repayment-status/${address}`);
+        const response = await fetch(
+          `${AGENT2_API_URL}/repayment-status/${address}`
+        );
         if (!response.ok) {
           // Don't show error toast for routine polling checks unless it's a persistent issue
           console.warn(`Repayment status check failed: ${response.status}`);
@@ -350,13 +368,11 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
     return () => clearInterval(intervalId);
   }, [address, addAppNotification, hasShownRepaymentToast]);
 
-
   const handleStakeUnstake = async () => {
     if (!actionAmount) {
       addAppNotification("Please enter an amount", "error");
       return;
     }
-
 
     const amount = parseFloat(actionAmount);
     if (isNaN(amount) || amount <= 0) {
@@ -574,7 +590,8 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
                   />
                   {selectedAction === "stake" && (
                     <p className="text-xs text-slate-500 mt-1">
-                      Amount will be automatically distributed across active pools using inverse liquidity strategy
+                      Amount will be automatically distributed across active
+                      pools using inverse liquidity strategy
                     </p>
                   )}
                 </div>
@@ -584,15 +601,17 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
                   <button
                     onClick={handleStakeUnstake}
                     disabled={
-                      !actionAmount || 
-                      isLoading || 
-                      isDistributedStaking
+                      !actionAmount || isLoading || isDistributedStaking
                     }
                     className="flex-1 px-4 py-2 bg-slate-600 hover:bg-slate-500 disabled:bg-slate-800 rounded text-white text-sm font-medium transition-colors disabled:cursor-not-allowed"
                   >
                     {isLoading || isDistributedStaking
                       ? "Processing..."
-                      : `${selectedAction === "stake" ? "Distribute & Stake" : "Unstake"}`}
+                      : `${
+                          selectedAction === "stake"
+                            ? "Distribute & Stake"
+                            : "Unstake"
+                        }`}
                   </button>
                   <button
                     onClick={() => {
@@ -631,28 +650,36 @@ const Profile: React.FC<ProfileProps> = ({ pools }) => {
                 <div
                   key={activity.hour}
                   className="relative flex-1 group"
-                  title={`${activity.hour}:00 - ${activity.hour + 1}:00: ${activity.isActive ? 'Active' : 'Inactive'}`}
+                  title={`${activity.hour}:00 - ${activity.hour + 1}:00: ${
+                    activity.isActive ? "Active" : "Inactive"
+                  }`}
                 >
                   <div
                     className={`w-full rounded-t-sm transition-all duration-300 ease-in-out ${
-                      activity.isActive ? 'bg-green-500' : 'bg-slate-600'
+                      activity.isActive ? "bg-green-500" : "bg-slate-600"
                     }`}
                     style={{
-                      height: activity.isActive ? `${(activity.hour % 12 + 1) * 6 + 30}%` : '30%', // Just for varied heights, not meaningful
-                      minHeight: '10px' // Ensure a minimum visible height
+                      height: activity.isActive
+                        ? `${((activity.hour % 12) + 1) * 6 + 30}%`
+                        : "30%", // Just for varied heights, not meaningful
+                      minHeight: "10px", // Ensure a minimum visible height
                     }}
                   />
                   <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-xs text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {activity.hour % 12 === 0 ? 12 : activity.hour % 12}{activity.hour < 12 || activity.hour === 23 ? 'a' : 'p'}
+                    {activity.hour % 12 === 0 ? 12 : activity.hour % 12}
+                    {activity.hour < 12 || activity.hour === 23 ? "a" : "p"}
                   </span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-slate-400 text-center">No bank activity data available.</p>
+            <p className="text-slate-400 text-center">
+              No bank activity data available.
+            </p>
           )}
-           <p className="text-xs text-slate-500 mt-3 text-center">
-            Visual representation of typical bank operational status throughout the day. Fetched from Agent 1.
+          <p className="text-xs text-slate-500 mt-3 text-center">
+            Visual representation of typical bank operational status throughout
+            the day. Fetched from Agent 1.
           </p>
         </div>
 

@@ -379,7 +379,7 @@ const App: React.FC = () => {
   // Render Main Pools View
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
-      {/* <div className="bg-slate-800 border-b border-slate-700 px-4 md:px-6 lg:px-8 py-4">
+      <div className="bg-slate-800 border-b border-slate-700 px-4 md:px-6 lg:px-8 py-4">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-6">
             <h1 className="text-2xl md:text-3xl font-bold text-sky-400">
@@ -427,10 +427,10 @@ const App: React.FC = () => {
             )}
           </div>
         </div>
-      </div> */}
+      </div>
 
       {/* Notifications */}
-      {/* <div className="fixed top-20 right-5 z-50 space-y-2 w-full max-w-xs sm:max-w-sm">
+      <div className="fixed top-20 right-5 z-50 space-y-2 w-full max-w-xs sm:max-w-sm">
         {appNotifications.map((n: AppNotificationType) => (
           <div
             key={n.id}
@@ -458,9 +458,9 @@ const App: React.FC = () => {
             <span>{n.message}</span>
           </div>
         ))}
-      </div> */}
+      </div>
 
-      {/* <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
+      <main className="flex-grow container mx-auto p-4 md:p-6 lg:p-8 space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <h2 className="text-3xl md:text-4xl font-bold text-sky-400">
             Liquidity Pools
@@ -537,10 +537,10 @@ const App: React.FC = () => {
             </div>
           )}
         </div>
-      </main> */}
+      </main>
 
       {/* Modals */}
-      {/* {selectedPoolForAction && currentUserData && isStakeModalOpen && (
+      {selectedPoolForAction && currentUserData && isStakeModalOpen && (
         <StakeModal
           pool={selectedPoolForAction}
           user={currentUserData}
@@ -566,12 +566,12 @@ const App: React.FC = () => {
           onClose={() => setIsRepayModalOpen(false)}
           onConfirm={handleRepayDebt}
         />
-      )} */}
+      )}
 
-      {/* <footer className="text-center p-4 md:p-6 text-slate-500 border-t border-slate-700">
+      <footer className="text-center p-4 md:p-6 text-slate-500 border-t border-slate-700">
         Project Aegis &copy; {new Date().getFullYear()} - Blockchain Liquidity
         System {address ? "(Connected)" : "(Disconnected)"}
-      </footer> */}
+      </footer>
       <Profile pools={pools} />
     </div>
   );
