@@ -25,6 +25,8 @@ dist-ssr
 *.sw?
 
 venv
-truffle-project/build/contracts/*.json
+/truffle-project/build/
 __pycache__/
+
+
 
