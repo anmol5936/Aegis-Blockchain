@@ -47,6 +47,8 @@ interface IBlockchainContext {
   disconnectWallet: () => void;
   isLoading: boolean;
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  isRepaymentPolling: boolean; // New state for repayment polling
+  setIsRepaymentPolling: React.Dispatch<React.SetStateAction<boolean>>; // Setter for new state
   appNotifications: AppNotification[];
   addAppNotification: (message: string, type?: NotificationType) => void;
   createPoolOnChain: (
@@ -91,6 +93,8 @@ const defaultBlockchainContextState: IBlockchainContext = {
   disconnectWallet: () => {},
   isLoading: false,
   setIsLoading: () => {},
+  isRepaymentPolling: false, // Initial value for new state
+  setIsRepaymentPolling: () => {}, // Initial setter for new state
   appNotifications: [],
   addAppNotification: () => {},
   createPoolOnChain: async () => null,
@@ -125,6 +129,7 @@ export const StateContextProvider = ({ children }) => {
   const [stakingTokenContract, setStakingTokenContract] =
     useState<ethers.Contract | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRepaymentPolling, setIsRepaymentPolling] = useState(false); // Initialize new state
   const [appNotifications, setAppNotifications] = useState<AppNotification[]>(
     []
   );
@@ -1698,6 +1703,8 @@ export const StateContextProvider = ({ children }) => {
       disconnectWallet,
       isLoading,
       setIsLoading,
+      isRepaymentPolling,
+      setIsRepaymentPolling,
       appNotifications,
       addAppNotification,
       createPoolOnChain,
@@ -1726,6 +1733,7 @@ export const StateContextProvider = ({ children }) => {
       connectWallet,
       disconnectWallet,
       isLoading,
+      isRepaymentPolling,
       appNotifications,
       addAppNotification,
       createPoolOnChain,

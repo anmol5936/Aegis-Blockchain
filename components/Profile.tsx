@@ -51,7 +51,9 @@ const Profile: React.FC = () => {
     repayOnChain,
     addAppNotification,
     isLoading,
-    setIsLoading
+    setIsLoading,
+    isRepaymentPolling,
+    setIsRepaymentPolling
   } = useStateContext();
 
   const [profileStats, setProfileStats] = useState<ProfileStats>({
@@ -67,12 +69,40 @@ const Profile: React.FC = () => {
   const [actionAmount, setActionAmount] = useState('');
   const [selectedPoolId, setSelectedPoolId] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [autoRepaymentToastId, setAutoRepaymentToastId] = useState<string | null>(null);
+  const [pollingTimeoutId, setPollingTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [pollCount, setPollCount] = useState(0);
 
-  const loadProfileData = useCallback(async () => {
+  const MAX_POLL_COUNT = 3; // Max number of times to poll for debt clearance
+  const POLL_INTERVAL = 15000; // 15 seconds
+
+  const clearPolling = useCallback(() => {
+    if (pollingTimeoutId) {
+      clearTimeout(pollingTimeoutId);
+      setPollingTimeoutId(null);
+    }
+    setIsRepaymentPolling(false);
+    setPollCount(0);
+    // autoRepaymentToastId is handled by the notification system's timeout
+  }, [pollingTimeoutId, setIsRepaymentPolling]);
+
+  const loadProfileData = useCallback(async (isPollingCall = false) => {
     if (!address) return;
 
+    // If this is not a polling call and polling is already active, don't proceed with a new full load.
+    // Let the polling mechanism handle the refresh.
+    if (!isPollingCall && isRepaymentPolling) {
+        console.log("Profile data load skipped: repayment polling is active.");
+        // Ensure isRefreshing is false if we skip, as it might have been set by a manual refresh click
+        if (isRefreshing) setIsRefreshing(false);
+        return;
+    }
+
     try {
-      setIsRefreshing(true);
+      if (!isPollingCall) { // Only set general loading for non-polling initial loads or manual refreshes
+        setIsRefreshing(true); // For manual refresh button indication
+        setIsLoading(true); // General loading state
+      }
       
       // Fetch user data and pools
       const [userData, pools] = await Promise.all([
@@ -80,7 +110,11 @@ const Profile: React.FC = () => {
         fetchBlockchainPools()
       ]);
 
-      if (!userData || !pools) return;
+      if (!userData || !pools) {
+        if (!isPollingCall) setIsLoading(false);
+        setIsRefreshing(false);
+        return;
+      }
 
       // Calculate total collateral across all pools
       const totalCollateral = parseFloat(await getTotalCollateralAcrossPools(address));
@@ -129,17 +163,105 @@ const Profile: React.FC = () => {
       });
 
       setPoolParticipations(participations);
+
+      if (isPollingCall) {
+        // This is a polling call
+        if (totalDebt === 0 || pollCount >= MAX_POLL_COUNT -1) { // -1 because pollCount increments before next call
+          addAppNotification(totalDebt === 0 ? 'Debt repayment confirmed.' : 'Finished checking for debt repayment.', totalDebt === 0 ? 'success' : 'info');
+          clearPolling();
+        } else {
+          // Continue polling
+          const nextPollCount = pollCount + 1;
+          setPollCount(nextPollCount);
+          const timeoutId = setTimeout(() => loadProfileData(true), POLL_INTERVAL);
+          setPollingTimeoutId(timeoutId);
+          console.log(`Scheduled next poll (${nextPollCount}/${MAX_POLL_COUNT}) for debt check.`);
+        }
+      } else if (totalDebt > 0 && !isRepaymentPolling) { // This is an initial load or manual refresh, not a poll itself
+        // Check bank status only if there's debt and not already polling
+        try {
+          const response = await fetch('http://localhost:8000/health');
+          if (response.ok) {
+            const healthData = await response.json();
+            const bankIsActive = Object.values(healthData.bank_statuses || {}).includes('up');
+
+            if (bankIsActive) {
+              console.log('Bank is active and debt exists. Starting repayment polling.');
+              setIsRepaymentPolling(true); // This will be the loader for polling
+              // setIsLoading(true) is already set for initial load / manual refresh
+              const toastId = Date.now().toString(); // Simple ID for notification
+              addAppNotification('Repayment in progress...', 'info');
+              setAutoRepaymentToastId(toastId);
+              setPollCount(0); // Reset poll count for new polling session
+              const timeoutId = setTimeout(() => loadProfileData(true), POLL_INTERVAL); // Start first poll
+              setPollingTimeoutId(timeoutId);
+            } else {
+               // Bank not active, or no debt, or already polling. Normal load completes.
+               setIsLoading(false);
+            }
+          } else {
+            console.warn('Failed to fetch bank status from health endpoint.');
+            setIsLoading(false); // Normal load completes
+          }
+        } catch (fetchError) {
+          console.error('Error fetching bank health:', fetchError);
+          addAppNotification('Could not verify bank status for automatic repayment.', 'warning');
+          setIsLoading(false); // Normal load completes
+        }
+      } else {
+         // No debt, or already polling. Normal load completes.
+         setIsLoading(false);
+      }
+
     } catch (error) {
       console.error('Error loading profile data:', error);
       addAppNotification('Failed to load profile data', 'error');
+      clearPolling(); // Clear polling on error
+      setIsLoading(false); // Ensure loading is false on error
     } finally {
+      // General refresh indicator for manual refresh button should always be turned off
       setIsRefreshing(false);
+      // General isLoading is managed based on conditions above (polling or initial load)
+      // If not polling and not set to false above, it means it was an initial load without triggering polling.
+      if (!isRepaymentPolling && isLoading && !isPollingCall) {
+        setIsLoading(false);
+      }
     }
-  }, [address, fetchUserData, fetchBlockchainPools, getTotalCollateralAcrossPools, addAppNotification]);
+  }, [
+    address,
+    fetchUserData,
+    fetchBlockchainPools,
+    getTotalCollateralAcrossPools,
+    addAppNotification,
+    isRepaymentPolling,
+    setIsRepaymentPolling,
+    setIsLoading,
+    pollCount,
+    clearPolling,
+    isLoading, // Added isLoading to dependency array
+    isRefreshing // Added isRefreshing
+]);
 
   useEffect(() => {
-    loadProfileData();
-  }, [loadProfileData]);
+    if (address && !isRepaymentPolling) { // Only load initially if not already polling
+      loadProfileData();
+    }
+    // Cleanup polling on component unmount
+    return () => {
+      if (pollingTimeoutId) {
+        clearTimeout(pollingTimeoutId);
+      }
+    };
+  }, [address]); // Removed loadProfileData from here to prevent re-triggering due to its own state changes. address ensures it runs on connect.
+
+  // Effect to handle manual refresh or direct calls to loadProfileData while polling
+  useEffect(() => {
+    // This effect is to allow manual refresh to work alongside polling logic
+    // If isRefreshing is true (manual click) and polling is not active, call loadProfileData
+    // The main loadProfileData will then handle the rest.
+    // No specific action needed here as loadProfileData itself handles isRefreshing state.
+  }, [isRefreshing]);
+
 
   const handleStakeUnstake = async () => {
     if (!selectedPoolId || !actionAmount || !selectedAction) {
@@ -217,11 +339,11 @@ const Profile: React.FC = () => {
             </div>
           </div>
           <button
-            onClick={loadProfileData}
-            disabled={isRefreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 rounded-lg text-white text-sm transition-colors"
+            onClick={() => loadProfileData()}
+            disabled={isRefreshing || isRepaymentPolling}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:opacity-70 rounded-lg text-white text-sm transition-colors"
           >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${isRefreshing || isRepaymentPolling ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>
@@ -284,11 +406,11 @@ const Profile: React.FC = () => {
             
             <button
               onClick={handleRepayAllDebt}
-              disabled={profileStats.totalDebt === 0 || isLoading}
+              disabled={profileStats.totalDebt === 0 || isLoading || isRepaymentPolling}
               className="flex items-center gap-2 p-3 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-lg text-white text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <DollarSign className="w-4 h-4" />
-              Repay All Debt
+              {isRepaymentPolling && profileStats.totalDebt > 0 ? 'Repaying...' : 'Repay All Debt'}
             </button>
           </div>
 
