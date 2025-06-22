@@ -75,7 +75,6 @@ interface IBlockchainContext {
   getTotalCollateralAcrossPools: (userAddress?: string) => Promise<string>;
   getRelatedPools: (poolAddress: string) => Promise<string[]>;
   fallbackPayWithCrossPools: (
-    primaryPoolAddress: string,
     merchantAddress: string,
     amount: string
   ) => Promise<boolean>;
@@ -1361,13 +1360,8 @@ export const StateContextProvider = ({ children }) => {
   ]);
 
   const fallbackPayWithCrossPools = useCallback(
-    async (
-      primaryPoolAddress: string,
-      merchantAddress: string,
-      amount: string
-    ): Promise<boolean> => {
+    async (merchantAddress: string, amount: string): Promise<boolean> => {
       console.log("=== fallbackPayWithCrossPools ===", {
-        primaryPoolAddress,
         merchantAddress,
         amount,
       });
@@ -1385,14 +1379,6 @@ export const StateContextProvider = ({ children }) => {
           return false;
         }
 
-        // Get pool contract
-        const poolContract = getLiquidityPoolContract(primaryPoolAddress);
-        if (!poolContract) {
-          addAppNotification("Primary pool contract not found", "error");
-          setIsLoading(false);
-          return false;
-        }
-
         // Validate merchant address
         if (!ethers.utils.isAddress(merchantAddress)) {
           addAppNotification("Invalid merchant address", "error");
@@ -1400,28 +1386,48 @@ export const StateContextProvider = ({ children }) => {
           return false;
         }
 
-        const decimals = stakingTokenInfo?.decimals || 18;
-        let amountWei;
+        // Fetch pools data from API
+        let poolsData;
         try {
-          amountWei = ethers.utils.parseUnits(amount, decimals);
-        } catch (parseError) {
-          console.error("Error parsing payment amount to Wei:", parseError);
+          const response = await fetch("http://localhost:8765/pools");
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          poolsData = await response.json();
+        } catch (fetchError) {
+          console.error("Error fetching pools data:", fetchError);
+          addAppNotification("Failed to fetch pools data", "error");
+          setIsLoading(false);
+          return false;
+        }
+
+        // Filter pools for current user and get user collateral amounts
+        const userPools = poolsData.pools
+          .filter((pool) => pool.userStake?.collateralAmount > 0)
+          .sort(
+            (a, b) =>
+              (b.userStake?.collateralAmount || 0) -
+              (a.userStake?.collateralAmount || 0)
+          ); // Sort by collateral descending
+
+        if (userPools.length === 0) {
           addAppNotification(
-            `Invalid payment amount format: ${amount}`,
+            "No pools with collateral found for user",
             "error"
           );
           setIsLoading(false);
           return false;
         }
 
-        // Fetch total collateral directly
-        const totalCollateralValue = await getTotalCollateralAcrossPools(
-          address
+        // Calculate total collateral
+        const totalCollateralFloat = userPools.reduce(
+          (sum, pool) => sum + pool.userStake.collateralAmount,
+          0
         );
-        const totalCollateralFloat = parseFloat(totalCollateralValue);
         console.log("Total collateral across pools:", {
           totalCollateralFloat,
           amountFloat,
+          userPoolsCount: userPools.length,
         });
 
         if (totalCollateralFloat < amountFloat) {
@@ -1433,107 +1439,223 @@ export const StateContextProvider = ({ children }) => {
           return false;
         }
 
-        // Get LP token contract instance
-        const lpTokenAddress = await poolContract.lpToken();
-        const lpTokenContract = new ethers.Contract(
-          lpTokenAddress,
-          LPERC20_ABI,
-          signer
-        );
-        const lpBalance = await lpTokenContract.balanceOf(address);
-        console.log(
-          "User LP balance:",
-          ethers.utils.formatUnits(lpBalance, 18)
-        );
+        const decimals = stakingTokenInfo?.decimals || 18;
+        let remainingAmount = amountFloat;
+        const paymentTransactions = [];
 
-        // Check token allowance for the pool contract
-        const allowance = await getTokenAllowance(primaryPoolAddress, address);
-        const allowanceFloat = parseFloat(allowance);
-        console.log("Token allowance for pool:", {
-          allowanceFloat,
-          amountFloat,
-        });
+        // Process each pool until remaining amount is zero
+        for (const pool of userPools) {
+          if (remainingAmount <= 0) break;
 
-        if (allowanceFloat < amountFloat) {
-          addAppNotification(
-            "Insufficient token allowance. Approving tokens...",
-            "info"
+          const poolAddress = pool.id;
+          const availableCollateral = pool.userStake.collateralAmount;
+
+          // Determine how much to pay from this pool
+          const paymentFromThisPool = Math.min(
+            remainingAmount,
+            availableCollateral
           );
-          // Ensure amount is passed as a clean string
-          const approvalTx = await approveToken(
-            primaryPoolAddress,
-            amountFloat.toString()
-          );
-          if (!approvalTx) {
-            addAppNotification("Token approval failed", "error");
-            setIsLoading(false);
-            return false;
+
+          console.log(`Processing pool ${pool.regionName} (${poolAddress}):`, {
+            availableCollateral,
+            paymentFromThisPool,
+            remainingAmount,
+          });
+
+          // Get pool contract
+          const poolContract = getLiquidityPoolContract(poolAddress);
+          if (!poolContract) {
+            console.error(`Pool contract not found for ${poolAddress}`);
+            continue;
           }
-        }
 
-        // Log pool state for debugging
-        const poolStatus = await poolContract.getPoolStatus();
-        const primaryCollateral = await poolContract.getStake(address);
-        const totalLiquidity = await poolContract.totalLiquidity();
-        console.log("Pool state:", {
-          poolStatus: poolStatus.toString(),
-          primaryCollateral: {
-            stakedAmount: ethers.utils.formatUnits(
-              primaryCollateral.stakedAmount,
+          let paymentAmountWei;
+          try {
+            paymentAmountWei = ethers.utils.parseUnits(
+              paymentFromThisPool.toString(),
               decimals
-            ),
-            collateralAmount: ethers.utils.formatUnits(
-              primaryCollateral.collateralAmount,
-              decimals
-            ),
-          },
-          totalLiquidity: ethers.utils.formatUnits(totalLiquidity, decimals),
-          lpBalance: ethers.utils.formatUnits(lpBalance, 18),
-        });
+            );
+          } catch (parseError) {
+            console.error("Error parsing payment amount to Wei:", parseError);
+            continue;
+          }
 
-        addAppNotification("Initiating cross-pool payment...", "info");
+          // Check token allowance for this pool
+          const allowance = await getTokenAllowance(poolAddress, address);
+          const allowanceFloat = parseFloat(allowance);
+          console.log(`Token allowance for pool ${pool.regionName}:`, {
+            allowanceFloat,
+            paymentFromThisPool,
+          });
 
-        // Estimate gas
-        let gasEstimate;
-        try {
-          gasEstimate = await poolContract.estimateGas.fallbackPay(
+          if (allowanceFloat < paymentFromThisPool) {
+            addAppNotification(
+              `Approving tokens for ${pool.regionName} pool...`,
+              "info"
+            );
+            const approvalTx = await approveToken(
+              poolAddress,
+              paymentFromThisPool.toString()
+            );
+            if (!approvalTx) {
+              addAppNotification(
+                `Token approval failed for ${pool.regionName} pool`,
+                "error"
+              );
+              continue;
+            }
+          }
+
+          // Log pool state for debugging
+          try {
+            const poolStatus = await poolContract.getPoolStatus();
+            const primaryCollateral = await poolContract.getStake(address);
+            const totalLiquidity = await poolContract.totalLiquidity();
+            console.log(`Pool state for ${pool.regionName}:`, {
+              poolStatus: poolStatus.toString(),
+              primaryCollateral: {
+                stakedAmount: ethers.utils.formatUnits(
+                  primaryCollateral.stakedAmount,
+                  decimals
+                ),
+                collateralAmount: ethers.utils.formatUnits(
+                  primaryCollateral.collateralAmount,
+                  decimals
+                ),
+              },
+              totalLiquidity: ethers.utils.formatUnits(
+                totalLiquidity,
+                decimals
+              ),
+            });
+          } catch (statusError) {
+            console.error(
+              `Error getting pool status for ${pool.regionName}:`,
+              statusError
+            );
+          }
+
+          // Estimate gas
+          let gasEstimate;
+          try {
+            gasEstimate = await poolContract.estimateGas.fallbackPay(
+              merchantAddress,
+              paymentAmountWei
+            );
+            console.log(
+              `Gas estimate for ${pool.regionName}:`,
+              gasEstimate.toString()
+            );
+          } catch (gasError) {
+            console.error(
+              `Gas estimation failed for ${pool.regionName}:`,
+              gasError
+            );
+            addAppNotification(
+              `Gas estimation failed for ${pool.regionName}: ${
+                gasError.reason || gasError.message
+              }`,
+              "error"
+            );
+            continue;
+          }
+
+          // Store transaction details for execution
+          paymentTransactions.push({
+            poolContract,
+            poolAddress,
+            regionName: pool.regionName,
             merchantAddress,
-            amountWei
+            paymentAmountWei,
+            paymentAmount: paymentFromThisPool,
+            gasEstimate,
+          });
+
+          // Update remaining amount
+          remainingAmount -= paymentFromThisPool;
+          console.log(
+            `Remaining amount after ${pool.regionName}:`,
+            remainingAmount
           );
-          console.log("Gas estimate:", gasEstimate.toString());
-        } catch (gasError) {
-          console.error("Gas estimation failed:", gasError);
-          addAppNotification(
-            `Gas estimation failed: ${gasError.reason || gasError.message}`,
-            "error"
-          );
-          setIsLoading(false);
-          throw gasError;
         }
 
-        // Execute transaction
-        const gasLimit = gasEstimate.mul(120).div(100); // 20% buffer
-        const fallbackTx = await poolContract.fallbackPay(
-          merchantAddress,
-          amountWei,
-          { gasLimit }
-        );
-        console.log("Fallback payment tx sent:", { hash: fallbackTx.hash });
+        if (paymentTransactions.length === 0) {
+          addAppNotification("No valid pools found for payment", "error");
+          setIsLoading(false);
+          return false;
+        }
+
         addAppNotification(
-          `Cross-pool payment transaction sent. Hash: ${fallbackTx.hash.substring(
-            0,
-            6
-          )}...`,
+          "Initiating cross-pool payment transactions...",
           "info"
         );
 
-        await fallbackTx.wait();
-        addAppNotification(
-          `Successfully paid ${amount} tokens using cross-pool collateral!`,
-          "success"
-        );
-        setIsLoading(false);
-        return true;
+        // Execute all transactions
+        const successfulTransactions = [];
+        for (const txData of paymentTransactions) {
+          try {
+            // Execute transaction
+            const gasLimit = txData.gasEstimate.mul(120).div(100); // 20% buffer
+            const fallbackTx = await txData.poolContract.fallbackPay(
+              txData.merchantAddress,
+              txData.paymentAmountWei,
+              { gasLimit }
+            );
+
+            console.log(`Fallback payment tx sent for ${txData.regionName}:`, {
+              hash: fallbackTx.hash,
+              amount: txData.paymentAmount,
+            });
+
+            addAppNotification(
+              `Payment transaction sent for ${
+                txData.regionName
+              }. Hash: ${fallbackTx.hash.substring(0, 6)}...`,
+              "info"
+            );
+
+            await fallbackTx.wait();
+            successfulTransactions.push({
+              regionName: txData.regionName,
+              amount: txData.paymentAmount,
+              hash: fallbackTx.hash,
+            });
+          } catch (txError) {
+            console.error(
+              `Transaction failed for ${txData.regionName}:`,
+              txError
+            );
+            addAppNotification(
+              `Payment failed for ${txData.regionName}: ${
+                txError.reason || txError.message
+              }`,
+              "error"
+            );
+          }
+        }
+
+        if (successfulTransactions.length > 0) {
+          const totalPaid = successfulTransactions.reduce(
+            (sum, tx) => sum + tx.amount,
+            0
+          );
+          addAppNotification(
+            `Successfully paid ${totalPaid.toFixed(
+              6
+            )} tokens using cross-pool collateral from ${
+              successfulTransactions.length
+            } pool(s)!`,
+            "success"
+          );
+
+          console.log("Successful transactions:", successfulTransactions);
+          setIsLoading(false);
+          return true;
+        } else {
+          addAppNotification("All payment transactions failed", "error");
+          setIsLoading(false);
+          return false;
+        }
       } catch (error) {
         console.error("Cross-pool payment error:", error);
         let errorMessage = "Cross-pool payment failed";
@@ -1563,7 +1685,6 @@ export const StateContextProvider = ({ children }) => {
       getTokenAllowance,
       approveToken,
       addAppNotification,
-      getTotalCollateralAcrossPools,
     ]
   );
   const contextValue = useMemo(

@@ -26,3 +26,5 @@ dist-ssr
 
 venv
 truffle-project/build/contracts/*.json
+__pycache__/
+
