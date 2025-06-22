@@ -4,16 +4,18 @@ import time
 import logging
 import asyncio
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, TypedDict, Annotated
 from contextlib import asynccontextmanager
 
 import redis
 import uvicorn
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Path
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from web3 import Web3, HTTPProvider
+
+from langgraph.graph import StateGraph, END, START
 
 load_dotenv()
 
@@ -29,15 +31,14 @@ POOL_FACTORY_ADDRESS = os.getenv('VITE_POOL_FACTORY_ADDRESS')
 STAKING_TOKEN_ADDRESS = os.getenv('VITE_STAKING_TOKEN_ADDRESS')
 FETCH_INTERVAL_SECONDS = int(os.getenv('AGENT3_FETCH_INTERVAL_SECONDS', 60))
 USER_ADDRESS_TO_MONITOR = os.getenv('AGENT3_USER_ADDRESS_TO_MONITOR', '0x6f6a29CD4b0fd655866c5f1A7fE3Fba89EfF7356')
-# Add SIGNER_ADDRESS for user stake queries
-SIGNER_ADDRESS = os.getenv('SIGNER_ADDRESS', USER_ADDRESS_TO_MONITOR)
+SIGNER_ADDRESS = os.getenv('SIGNER_ADDRESS', USER_ADDRESS_TO_MONITOR) # Default to USER_ADDRESS_TO_MONITOR if not set
 API_PORT = int(os.getenv('API_PORT', 8765))
 
-# Pydantic Models
+# --- Pydantic Models ---
 class StakeInfo(BaseModel):
     userId: str
     stakedAmount: float
-    collateralAmount: float
+    collateralAmount: float # This will now be dynamically adjusted by credit score for the SIGNER_ADDRESS
     lpTokensMinted: float
     stakeTimestamp: int
 
@@ -53,14 +54,14 @@ class PoolData(BaseModel):
     regionName: str
     totalLiquidity: float
     totalDebt: float
-    userDebt: float
-    stakers: List[StakeInfo]
-    debts: List[DebtInfo]
+    userDebt: float # Specific to USER_ADDRESS_TO_MONITOR context
+    stakers: List[StakeInfo] # General stakers list
+    debts: List[DebtInfo] # Specific to USER_ADDRESS_TO_MONITOR context
     status: str
     rewardsPot: float
     apy: float
     lpTokenSupply: float
-    userStake: Optional[StakeInfo]  # Add user stake info to the model
+    userStake: Optional[StakeInfo] # Specific to SIGNER_ADDRESS context, with dynamic collateral
     lastUpdated: datetime
 
 class UserData(BaseModel):
@@ -69,6 +70,7 @@ class UserData(BaseModel):
     tokenBalance: float
     lpTokenBalances: Dict[str, float]
     lastUpdated: datetime
+    creditScore: Optional[int] = None # Added field for credit score
 
 class PoolsResponse(BaseModel):
     pools: List[PoolData]
@@ -83,20 +85,46 @@ class OptimizationRecommendation(BaseModel):
     maxLiquidity: float
     potentialApy: float
 
+class CreditScoreFactors(BaseModel):
+    totalStaked: float = 0.0
+    totalDebt: float = 0.0
+    numPoolsStakedIn: int = 0
+    debtToStakeRatio: Optional[float] = None
+    hasActiveDebt: bool = False
+
+class CreditScoreResponse(BaseModel):
+    userId: str
+    creditScore: int = Field(..., ge=0, le=1000)
+    factorsConsidered: CreditScoreFactors
+    lastCalculated: datetime
+
+# --- LangGraph Credit Scoring State ---
+class CreditScoringState(TypedDict):
+    user_id: str
+    raw_staked_amount: float
+    raw_debt_amount: float
+    num_pools_staked_in: int
+    num_active_debts: int # Number of distinct active debts
+    score: int
+    factors: List[str] # For human-readable explanation (optional)
+    final_factors_summary: Optional[CreditScoreFactors]
+
+
+# --- LiquidityPoolService (Handles Blockchain Interaction) ---
 class LiquidityPoolService:
     def __init__(self):
-        self.pools_data: List[Dict] = []
-        self.user_data: Dict[str, Dict] = {}
+        self.pools_data: List[Dict] = [] # This is a cache
+        self.user_data_cache: Dict[str, Dict] = {} # Cache for UserData objects
         self.last_fetch_time: Optional[datetime] = None
         self.redis_client: Optional[redis.Redis] = None
         self.w3: Optional[Web3] = None
         self.pool_factory_contract = None
         self.staking_token_contract = None
+        self.LIQUIDITY_POOL_ABI: Optional[list] = None
         self._initialize_connections()
         self._load_contracts()
 
     def _initialize_connections(self):
-        """Initialize Redis and Web3 connections"""
         try:
             self.redis_client = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0, decode_responses=True)
             self.redis_client.ping()
@@ -104,7 +132,6 @@ class LiquidityPoolService:
         except redis.exceptions.ConnectionError as e:
             logger.error(f"Redis connection failed: {e}")
             self.redis_client = None
-
         try:
             self.w3 = Web3(HTTPProvider(ETH_PROVIDER_URL))
             if not self.w3.is_connected():
@@ -115,27 +142,21 @@ class LiquidityPoolService:
             self.w3 = None
 
     def _load_contracts(self):
-        """Load contract ABIs and initialize contracts"""
         try:
-            POOL_FACTORY_ABI = json.load(open('../truffle-project/build/contracts/PoolFactory.json'))['abi']
-            LIQUIDITY_POOL_ABI = json.load(open('../truffle-project/build/contracts/LiquidityPool.json'))['abi']
-            ERC20_ABI = json.load(open('../truffle-project/build/contracts/ERC20.json'))['abi']
+            with open('../truffle-project/build/contracts/PoolFactory.json') as f:
+                POOL_FACTORY_ABI = json.load(f)['abi']
+            with open('../truffle-project/build/contracts/LiquidityPool.json') as f:
+                self.LIQUIDITY_POOL_ABI = json.load(f)['abi']
+            with open('../truffle-project/build/contracts/ERC20.json') as f:
+                ERC20_ABI = json.load(f)['abi']
             
-            self.LIQUIDITY_POOL_ABI = LIQUIDITY_POOL_ABI
-            
-            if POOL_FACTORY_ADDRESS and STAKING_TOKEN_ADDRESS and self.w3:
-                self.pool_factory_contract = self.w3.eth.contract(
-                    address=Web3.to_checksum_address(POOL_FACTORY_ADDRESS), 
-                    abi=POOL_FACTORY_ABI
-                )
-                self.staking_token_contract = self.w3.eth.contract(
-                    address=Web3.to_checksum_address(STAKING_TOKEN_ADDRESS), 
-                    abi=ERC20_ABI
-                )
+            if POOL_FACTORY_ADDRESS and STAKING_TOKEN_ADDRESS and self.w3 and self.LIQUIDITY_POOL_ABI:
+                self.pool_factory_contract = self.w3.eth.contract(address=Web3.to_checksum_address(POOL_FACTORY_ADDRESS), abi=POOL_FACTORY_ABI)
+                self.staking_token_contract = self.w3.eth.contract(address=Web3.to_checksum_address(STAKING_TOKEN_ADDRESS), abi=ERC20_ABI)
                 logger.info("Contracts initialized successfully")
             else:
-                raise ValueError("Missing contract addresses or Web3 connection")
-                
+                missing = [item for item, val in [("Factory Address", POOL_FACTORY_ADDRESS), ("Token Address", STAKING_TOKEN_ADDRESS), ("Web3", self.w3), ("LP ABI", self.LIQUIDITY_POOL_ABI)] if not val]
+                raise ValueError(f"Missing critical components for contract initialization: {', '.join(missing)}")
         except FileNotFoundError as e:
             logger.error(f"Contract ABI file not found: {e}")
             raise

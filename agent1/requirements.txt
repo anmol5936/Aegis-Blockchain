@@ -1,3 +1,5 @@
 confluent_kafka
 python-dotenv
 requests
+fastapi
+uvicorn[standard]

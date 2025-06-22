@@ -3,112 +3,187 @@ import json
 import time
 import random
 import logging
-import requests # Added for fetching bank status
+import asyncio
+from contextlib import asynccontextmanager
+from typing import List, Dict, Any
+
+import requests
+import uvicorn
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from confluent_kafka import Producer
 from dotenv import load_dotenv
+
+# Assuming bank_activity_predictor.py is in the same directory (agent1/)
+from .bank_activity_predictor import get_daily_activity_schedule
 
 load_dotenv()
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 KAFKA_BROKER_URL = os.getenv('KAFKA_BROKER_URL', 'localhost:9092')
 BANK_SERVER_TOPIC = os.getenv('BANK_SERVER_TOPIC', 'bank_server')
-# BANK_ID is no longer a single ID, but we'll fetch from a list of banks
-BANK_SIMULATOR_URL = os.getenv('BANK_SIMULATOR_URL', 'http://localhost:5000/api/status') # URL for the bank simulator
-MONITORED_BANKS = ["SBI", "Axis Bank", "ICICI Bank"] # Banks to monitor, these should match names in bank simulator
+BANK_SIMULATOR_URL = os.getenv('BANK_SIMULATOR_URL', 'http://localhost:5000/api/status')
+MONITORED_BANKS = ["SBI", "Axis Bank", "ICICI Bank"]
+AGENT1_PORT = int(os.getenv('AGENT1_PORT', 8001)) # Port for Agent 1's API
+FETCH_INTERVAL_SECONDS = int(os.getenv('AGENT1_FETCH_INTERVAL_SECONDS', 5)) # Reduced for more frequent updates
 
+# --- Pydantic Models ---
+class BankStatusMessage(BaseModel):
+    bank_id: str
+    status: str
+    timestamp: str
+
+class BankActivityHour(BaseModel):
+    hour: int
+    isActive: bool
+
+class BankActivityScheduleResponse(BaseModel):
+    schedule: List[BankActivityHour]
+    lastUpdated: str
+
+# --- Bank Server Monitor Agent Logic ---
 class BankServerMonitorAgent:
     def __init__(self):
         self.producer_conf = {'bootstrap.servers': KAFKA_BROKER_URL}
         self.producer = Producer(self.producer_conf)
-        # self.bank_status = "down" # No longer a single status, fetched per bank
-        logging.info(f"BankServerMonitorAgent initialized. Kafka Broker: {KAFKA_BROKER_URL}, Topic: {BANK_SERVER_TOPIC}, Simulator URL: {BANK_SIMULATOR_URL}")
+        logger.info(f"BankServerMonitorAgent Kafka Producer configured for brokers: {KAFKA_BROKER_URL}")
 
     def delivery_report(self, err, msg):
-        """ Called once for each message produced to indicate delivery result.
-            Triggered by poll() or flush(). """
         if err is not None:
-            logging.error(f'Message delivery failed for {msg.key() if msg.key() else "unknown bank"}: {err}')
+            logger.error(f'Message delivery failed for {msg.key()}: {err}')
         else:
-            logging.info(f'Message for bank {msg.key().decode("utf-8") if msg.key() else "unknown bank"} delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}')
+            logger.info(f'Message for bank {msg.key().decode("utf-8")} delivered to {msg.topic()} [{msg.partition()}] at offset {msg.offset()}')
 
-    def fetch_all_bank_statuses(self):
-        """ Fetches status for all monitored banks from the simulator. """
+    def fetch_all_bank_statuses(self) -> Dict[str, str]:
         try:
             response = requests.get(BANK_SIMULATOR_URL)
-            response.raise_for_status()  # Raise an exception for HTTP errors
+            response.raise_for_status()
             data = response.json()
-            #The simulator returns status like: {"banks": {"SBI": {"status": "active", ...}, ...}}
-            # We need to parse this to get individual bank statuses
             statuses = {}
             if 'banks' in data:
                 for bank_id in MONITORED_BANKS:
                     if bank_id in data['banks']:
-                        # Simulator status is "active" or "inactive", convert to "up" or "down"
                         simulator_status = data['banks'][bank_id].get('status', 'inactive').lower()
                         statuses[bank_id] = "up" if simulator_status == "active" else "down"
                     else:
-                        logging.warning(f"Bank ID {bank_id} not found in simulator response. Defaulting to 'down'.")
-                        statuses[bank_id] = "down" # Default if bank not in response
+                        logger.warning(f"Bank ID {bank_id} not found in simulator response. Defaulting to 'down'.")
+                        statuses[bank_id] = "down"
             else:
-                logging.error("Bank simulator response does not contain 'banks' key.")
+                logger.error("Bank simulator response does not contain 'banks' key.")
             return statuses
         except requests.exceptions.RequestException as e:
-            logging.error(f"Error fetching bank statuses from simulator: {e}")
-            # Return a default "down" status for all monitored banks in case of error
+            logger.error(f"Error fetching bank statuses from simulator: {e}")
             return {bank_id: "down" for bank_id in MONITORED_BANKS}
         except json.JSONDecodeError:
-            logging.error(f"Error decoding JSON from bank simulator response.")
+            logger.error("Error decoding JSON from bank simulator response.")
             return {bank_id: "down" for bank_id in MONITORED_BANKS}
 
-
-    def publish_bank_status(self, bank_id, status):
-        """ Publishes the status for a specific bank to Kafka. """
-        message = {
-            "bank_id": bank_id,
-            "status": status,
-            "timestamp": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
-        }
+    def publish_bank_status(self, bank_id: str, status: str):
+        message = BankStatusMessage(
+            bank_id=bank_id,
+            status=status,
+            timestamp=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+        )
         try:
             self.producer.produce(
                 BANK_SERVER_TOPIC,
-                key=bank_id.encode('utf-8'), # Use bank_id as key for partitioning
-                value=json.dumps(message).encode('utf-8'),
+                key=bank_id.encode('utf-8'),
+                value=message.model_dump_json().encode('utf-8'),
                 callback=self.delivery_report
             )
-            # self.producer.poll(0) # Trigger delivery report callbacks - better to poll after loop
-            logging.info(f"Published bank status: {message}")
+            logger.debug(f"Published bank status: {message.model_dump_json()}")
         except Exception as e:
-            logging.error(f"Error publishing bank status for {bank_id}: {e}")
+            logger.error(f"Error publishing bank status for {bank_id}: {e}")
 
-    def start(self):
-        logging.info("BankServerMonitorAgent started.")
+    async def run_monitoring_loop(self):
+        logger.info("BankServerMonitorAgent monitoring loop started.")
         try:
             while True:
                 all_bank_statuses = self.fetch_all_bank_statuses()
                 if not all_bank_statuses:
-                    logging.warning("No bank statuses fetched. Retrying in next cycle.")
+                    logger.warning("No bank statuses fetched. Retrying in next cycle.")
                 else:
                     for bank_id, status in all_bank_statuses.items():
-                        logging.info(f"Fetched status for {bank_id}: {status}")
+                        logger.info(f"Fetched status for {bank_id}: {status}")
                         self.publish_bank_status(bank_id, status)
+                    self.producer.poll(0) # Process Kafka callbacks
 
-                    self.producer.poll(0) # Trigger delivery report callbacks after producing all messages for this cycle
-
-                # Flush messages every few iterations or after a certain time
-                # For this agent, flushing after each message is fine given the low frequency
-                self.producer.flush() # Ensure all messages for this cycle are sent
-                time.sleep(random.randint(2, 3))  # Sleep for 15-30 seconds (reduced for more frequent updates)
-        except KeyboardInterrupt:
-            logging.info("BankServerMonitorAgent stopped by user.")
+                self.producer.flush() # Ensure messages are sent
+                await asyncio.sleep(FETCH_INTERVAL_SECONDS)
+        except asyncio.CancelledError:
+            logger.info("BankServerMonitorAgent monitoring loop was cancelled.")
         except Exception as e:
-            logging.error(f"An unexpected error occurred in BankServerMonitorAgent: {e}", exc_info=True)
+            logger.error(f"An unexpected error occurred in BankServerMonitorAgent monitoring loop: {e}", exc_info=True)
         finally:
-            # Wait for all messages in the Producer queue to be delivered.
             self.producer.flush()
-            logging.info("BankServerMonitorAgent shut down.")
+            logger.info("BankServerMonitorAgent monitoring loop shut down.")
+
+# --- FastAPI Application ---
+bank_monitor_agent = BankServerMonitorAgent()
+monitoring_task = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global monitoring_task
+    logger.info("Agent 1 FastAPI application starting up...")
+    # Start the bank monitoring loop as a background task
+    monitoring_task = asyncio.create_task(bank_monitor_agent.run_monitoring_loop())
+    yield
+    logger.info("Agent 1 FastAPI application shutting down...")
+    if monitoring_task:
+        monitoring_task.cancel()
+        try:
+            await monitoring_task
+        except asyncio.CancelledError:
+            logger.info("Monitoring task successfully cancelled.")
+    logger.info("Agent 1 shutdown complete.")
+
+app = FastAPI(
+    title="Agent 1: Bank Server Monitor & Activity API",
+    description="Monitors bank server statuses and provides bank activity information.",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Allow all origins for simplicity
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/", summary="Health Check")
+async def root():
+    return {
+        "message": "Agent 1: Bank Server Monitor & Activity API is running.",
+        "kafka_broker": KAFKA_BROKER_URL,
+        "kafka_topic": BANK_SERVER_TOPIC,
+        "bank_simulator_url": BANK_SIMULATOR_URL,
+        "monitoring_status": "active" if monitoring_task and not monitoring_task.done() else "inactive"
+    }
+
+@app.get("/bank-activity-schedule", response_model=BankActivityScheduleResponse, summary="Get Bank Activity Schedule")
+async def get_activity_schedule(day_offset: int = 0):
+    """
+    Provides the bank's activity schedule for a given day.
+    - `day_offset`: 0 for today, 1 for tomorrow, -1 for yesterday, etc.
+    """
+    try:
+        schedule = get_daily_activity_schedule(day_offset=day_offset)
+        return BankActivityScheduleResponse(
+            schedule=schedule,
+            lastUpdated=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+        )
+    except Exception as e:
+        logger.error(f"Error generating bank activity schedule: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to generate bank activity schedule.")
 
 if __name__ == '__main__':
-    agent = BankServerMonitorAgent()
-    agent.start() 
+    logger.info(f"Starting Agent 1 API server on port {AGENT1_PORT}")
+    uvicorn.run(app, host="0.0.0.0", port=AGENT1_PORT)
