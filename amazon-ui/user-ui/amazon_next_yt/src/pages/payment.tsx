@@ -20,6 +20,7 @@ import { useRouter } from "next/router";
 import { useSelector } from "react-redux";
 import { StateProps, StoreProduct } from "../../../type"; // Adjusted path
 import FormattedPrice from "../components/FormattedPrice"; // Import FormattedPrice
+import axios from "axios";
 
 // Extend Window interface for MetaMask
 declare global {
@@ -83,7 +84,7 @@ function RenderPayment() {
       type: "image",
       category: "upi",
       description: "Pay with PhonePe UPI",
-      popular: true
+      popular: true,
     },
     {
       id: "googlepay",
@@ -92,7 +93,7 @@ function RenderPayment() {
       type: "image",
       category: "upi",
       description: "Pay with Google Pay UPI",
-      popular: true
+      popular: true,
     },
     {
       id: "paytm",
@@ -101,7 +102,7 @@ function RenderPayment() {
       type: "image",
       category: "wallet",
       description: "Pay with Paytm Wallet",
-      popular: false
+      popular: false,
     },
     {
       id: "card",
@@ -110,7 +111,7 @@ function RenderPayment() {
       type: "emoji",
       category: "card",
       description: "Visa, MasterCard, RuPay & more",
-      popular: true
+      popular: true,
     },
     {
       id: "netbanking",
@@ -119,7 +120,7 @@ function RenderPayment() {
       type: "emoji",
       category: "banking",
       description: "Pay directly from your bank",
-      popular: false
+      popular: false,
     },
   ];
 
@@ -177,7 +178,8 @@ function RenderPayment() {
   const [paymentStep, setPaymentStep] = useState<PaymentStep>("selection");
   const [currentAegisStep, setCurrentAegisStep] = useState(0);
   const [aegisMessage, setAegisMessage] = useState("");
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>("");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+    useState<string>("");
   const [showBankDropdown, setShowBankDropdown] = useState(false);
   const [selectedBank, setSelectedBank] = useState<string>("");
   const [userLocation, setUserLocation] = useState<UserLocationState>({
@@ -235,20 +237,22 @@ function RenderPayment() {
   };
 
   const initiatePaymentProcessing = async (method: string, bankId?: string) => {
-    const selectedBankName = bankId ? banks.find((b) => b.id === bankId)?.name : "your selected method";
-    const confirmationMessage = `You are about to pay ${formatPrice(totalValue)} using ${selectedBankName}. Proceed?`;
+    const selectedBankName = bankId
+      ? banks.find((b) => b.id === bankId)?.name
+      : "your selected method";
+    const confirmationMessage = `You are about to pay ${formatPrice(
+      totalValue
+    )} using ${selectedBankName}. Proceed?`;
 
     if (window.confirm(confirmationMessage)) {
       await handlePayment(method, bankId);
     } else {
       console.log("Payment cancelled by user.");
-      // Optionally reset any state if needed, e.g., selected payment method
       setSelectedPaymentMethod("");
       setSelectedBank("");
     }
   };
 
-  // Check if MetaMask is installed
   const isMetaMaskInstalled = () => {
     return typeof window !== "undefined" && Boolean(window.ethereum);
   };
@@ -408,11 +412,53 @@ function RenderPayment() {
     }
     setPaymentStep("processing");
 
+    let isBankActive = false;
+    if (bankId) {
+      try {
+        const response = await axios.get("http://localhost:5000/api/status");
+        const bankStatus = response.data.banks;
+        const selectedBankApiName = banks.find((b) => b.id === bankId)?.apiName;
+        if (
+          selectedBankApiName &&
+          bankStatus[selectedBankApiName]?.status === "active"
+        ) {
+          isBankActive = true;
+        }
+      } catch (error) {
+        console.error("Error fetching bank status:", error);
+        setPaymentStep("error");
+        alert("Failed to verify bank status. Please try again.");
+        return;
+      }
+    }
+    if (isBankActive) {
+      // Process payment normally (non-blockchain)
+      console.log(
+        `Processing payment via ${banks.find((b) => b.id === bankId)?.name}`
+      );
+      setPaymentStep("processing");
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate bank processing
+      setPaymentStep("success");
+      alert(
+        `Payment of ${formatPrice(totalValue)} via ${
+          banks.find((b) => b.id === bankId)?.name
+        } completed successfully!`
+      );
+      return;
+    }
+
     const merchantId = "0xae6fE3971850928c94C8638cC1E83dA4F155cB47";
     const primaryFallbackPoolId = "0x622af06836555bd159a54555f3b0cdeb0a5fbfda";
 
-    let capturedUserGeoLocation: { latitude: number; longitude: number } | null = null;
-    if (userLocation.status === "success" && userLocation.latitude && userLocation.longitude) {
+    let capturedUserGeoLocation: {
+      latitude: number;
+      longitude: number;
+    } | null = null;
+    if (
+      userLocation.status === "success" &&
+      userLocation.latitude &&
+      userLocation.longitude
+    ) {
       capturedUserGeoLocation = {
         latitude: userLocation.latitude,
         longitude: userLocation.longitude,
@@ -450,7 +496,9 @@ function RenderPayment() {
         for (let i = 0; i < aegisSteps.length; i++) {
           setCurrentAegisStep(i);
           setAegisMessage(aegisSteps[i].message);
-          await new Promise((resolve) => setTimeout(resolve, aegisSteps[i].duration));
+          await new Promise((resolve) =>
+            setTimeout(resolve, aegisSteps[i].duration)
+          );
         }
         setPaymentStep("success");
       } else {
@@ -502,7 +550,9 @@ function RenderPayment() {
               <div className="h-6 w-px bg-gray-600"></div>
               <div>
                 <h1 className="text-xl font-medium">Select a payment method</h1>
-                <p className="text-sm text-gray-300">Choose how you'd like to pay</p>
+                <p className="text-sm text-gray-300">
+                  Choose how you'd like to pay
+                </p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -512,9 +562,13 @@ function RenderPayment() {
                     <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                     <Wallet className="w-4 h-4 text-green-300" />
                     <div className="text-sm">
-                      <div className="font-medium">{formatAddress(walletState.address)}</div>
+                      <div className="font-medium">
+                        {formatAddress(walletState.address)}
+                      </div>
                       {walletState.balance && (
-                        <div className="text-xs text-green-200">{walletState.balance} ETH</div>
+                        <div className="text-xs text-green-200">
+                          {walletState.balance} ETH
+                        </div>
                       )}
                     </div>
                   </div>
@@ -538,7 +592,9 @@ function RenderPayment() {
                     <Wallet className="w-4 h-4" />
                   )}
                   <span>
-                    {walletState.isConnecting ? "Connecting..." : "Connect Wallet"}
+                    {walletState.isConnecting
+                      ? "Connecting..."
+                      : "Connect Wallet"}
                   </span>
                 </button>
               )}
@@ -551,29 +607,42 @@ function RenderPayment() {
         {/* Location Status */}
         <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
           <div className="flex items-center space-x-3">
-            <MapPin className={`w-5 h-5 ${
-              userLocation.status === "success" ? "text-green-600" :
-              userLocation.status === "loading" ? "text-blue-600" :
-              userLocation.status === "error" ? "text-red-600" : "text-gray-400"
-            }`} />
+            <MapPin
+              className={`w-5 h-5 ${
+                userLocation.status === "success"
+                  ? "text-green-600"
+                  : userLocation.status === "loading"
+                  ? "text-blue-600"
+                  : userLocation.status === "error"
+                  ? "text-red-600"
+                  : "text-gray-400"
+              }`}
+            />
             <div className="flex-1">
               {userLocation.status === "loading" && (
                 <div className="flex items-center space-x-2">
                   <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                  <span className="text-sm text-blue-700 font-medium">Fetching location...</span>
+                  <span className="text-sm text-blue-700 font-medium">
+                    Fetching location...
+                  </span>
                 </div>
               )}
               {userLocation.status === "success" && userLocation.latitude && (
                 <div className="text-sm">
-                  <span className="text-green-700 font-medium">✓ Location verified</span>
+                  <span className="text-green-700 font-medium">
+                    ✓ Location verified
+                  </span>
                   <span className="text-gray-500 ml-2">
-                    {userLocation.latitude.toFixed(4)}, {userLocation.longitude?.toFixed(4)}
+                    {userLocation.latitude.toFixed(4)},{" "}
+                    {userLocation.longitude?.toFixed(4)}
                   </span>
                 </div>
               )}
               {userLocation.status === "error" && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-red-600">{userLocation.error}</span>
+                  <span className="text-sm text-red-600">
+                    {userLocation.error}
+                  </span>
                   {userLocation.error?.includes("permission denied") && (
                     <button
                       onClick={captureUserLocation}
@@ -585,7 +654,9 @@ function RenderPayment() {
                 </div>
               )}
               {userLocation.status === "idle" && (
-                <span className="text-sm text-gray-500">Initializing location services...</span>
+                <span className="text-sm text-gray-500">
+                  Initializing location services...
+                </span>
               )}
             </div>
           </div>
@@ -605,7 +676,8 @@ function RenderPayment() {
                   Enhance Your Security
                 </h3>
                 <p className="text-yellow-700 mb-4">
-                  Install MetaMask to enable secure blockchain payments and enhanced transaction security.
+                  Install MetaMask to enable secure blockchain payments and
+                  enhanced transaction security.
                 </p>
                 <button
                   onClick={() =>
@@ -627,7 +699,9 @@ function RenderPayment() {
             {/* Products */}
             {productData.length > 0 && (
               <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-                <h2 className="text-lg font-medium mb-4 text-gray-900">Order Summary</h2>
+                <h2 className="text-lg font-medium mb-4 text-gray-900">
+                  Order Summary
+                </h2>
                 <div className="space-y-4">
                   {productData.map((item: StoreProduct) => (
                     <div
@@ -647,7 +721,9 @@ function RenderPayment() {
                         <h3 className="text-sm font-medium text-gray-900 truncate">
                           {item.title}
                         </h3>
-                        <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                        <p className="text-xs text-gray-500">
+                          Qty: {item.quantity}
+                        </p>
                       </div>
                       <div className="text-sm font-medium text-gray-900">
                         <FormattedPrice amount={item.price * item.quantity} />
@@ -661,7 +737,9 @@ function RenderPayment() {
             {/* Total */}
             <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
               <div className="flex justify-between items-center mb-4">
-                <span className="text-lg font-medium text-gray-900">Order Total</span>
+                <span className="text-lg font-medium text-gray-900">
+                  Order Total
+                </span>
                 <span className="text-2xl font-bold text-red-600">
                   <FormattedPrice amount={totalValue} />
                 </span>
@@ -678,173 +756,221 @@ function RenderPayment() {
             {paymentStep === "selection" && (
               <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
                 <div className="p-6 border-b border-gray-200">
-                  <h2 className="text-xl font-medium text-gray-900">Choose a payment method</h2>
-                  <p className="text-sm text-gray-600 mt-1">We accept all major payment methods</p>
+                  <h2 className="text-xl font-medium text-gray-900">
+                    Choose a payment method
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    We accept all major payment methods
+                  </p>
                 </div>
 
                 <div className="p-6">
                   {/* Popular Methods */}
                   <div className="mb-6">
                     <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
-                      <span className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full mr-2">Popular</span>
+                      <span className="bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full mr-2">
+                        Popular
+                      </span>
                       Most used payment methods
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {paymentMethods.filter(method => method.popular).map((method) => (
-                        <div key={method.id}>
-                          {method.id === "netbanking" ? (
-                            <div className="border border-gray-200 rounded-lg overflow-hidden hover:border-orange-300 transition-colors">
-                              <button
-                                onClick={() => setShowBankDropdown(!showBankDropdown)}
-                                className="w-full flex items-center justify-between p-4 hover:bg-orange-50 transition-colors text-left"
-                              >
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                                    {getCategoryIcon(method.category)}
+                      {paymentMethods
+                        .filter((method) => method.popular)
+                        .map((method) => (
+                          <div key={method.id}>
+                            {method.id === "netbanking" ? (
+                              <div className="border border-gray-200 rounded-lg overflow-hidden hover:border-orange-300 transition-colors">
+                                <button
+                                  onClick={() =>
+                                    setShowBankDropdown(!showBankDropdown)
+                                  }
+                                  className="w-full flex items-center justify-between p-4 hover:bg-orange-50 transition-colors text-left"
+                                >
+                                  <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                                      {getCategoryIcon(method.category)}
+                                    </div>
+                                    <div>
+                                      <div className="font-medium text-gray-900">
+                                        {method.name}
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        {method.description}
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <div className="font-medium text-gray-900">{method.name}</div>
-                                    <div className="text-xs text-gray-500">{method.description}</div>
-                                  </div>
-                                </div>
-                                <ChevronDown
-                                  className={`w-5 h-5 text-gray-400 transform transition-transform duration-200 ${
-                                    showBankDropdown ? "rotate-180" : ""
-                                  }`}
-                                />
-                              </button>
-                              {showBankDropdown && (
-                                <div className="border-t border-gray-200 bg-gray-50">
-                                  <div className="p-2 space-y-1">
-                                    {banks.map((bank) => (
-                                      <button
-                                        key={bank.id}
-                                        onClick={() => handleBankSelection(bank.id)}
-                                        className="w-full flex items-center space-x-3 p-3 hover:bg-white hover:shadow-sm transition-all duration-150 text-left rounded-lg"
-                                      >
-                                        <div className="w-8 h-8 bg-white rounded-lg shadow-sm flex items-center justify-center">
-                                          <Image
-                                            src={bank.icon}
-                                            alt={bank.name}
-                                            width={24}
-                                            height={24}
-                                            className="object-contain"
-                                          />
-                                        </div>
-                                        <span className="font-medium text-gray-700">{bank.name}</span>
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => initiatePaymentProcessing(method.id)}
-                              className="w-full flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 transition-all duration-200 text-left"
-                            >
-                              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                                {method.type === "image" ? (
-                                  <Image
-                                    src={method.icon}
-                                    alt={method.name}
-                                    width={24}
-                                    height={24}
-                                    className="object-contain"
+                                  <ChevronDown
+                                    className={`w-5 h-5 text-gray-400 transform transition-transform duration-200 ${
+                                      showBankDropdown ? "rotate-180" : ""
+                                    }`}
                                   />
-                                ) : (
-                                  <span className="text-xl">{method.icon}</span>
+                                </button>
+                                {showBankDropdown && (
+                                  <div className="border-t border-gray-200 bg-gray-50">
+                                    <div className="p-2 space-y-1">
+                                      {banks.map((bank) => (
+                                        <button
+                                          key={bank.id}
+                                          onClick={() =>
+                                            handleBankSelection(bank.id)
+                                          }
+                                          className="w-full flex items-center space-x-3 p-3 hover:bg-white hover:shadow-sm transition-all duration-150 text-left rounded-lg"
+                                        >
+                                          <div className="w-8 h-8 bg-white rounded-lg shadow-sm flex items-center justify-center">
+                                            <Image
+                                              src={bank.icon}
+                                              alt={bank.name}
+                                              width={24}
+                                              height={24}
+                                              className="object-contain"
+                                            />
+                                          </div>
+                                          <span className="font-medium text-gray-700">
+                                            {bank.name}
+                                          </span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
                                 )}
                               </div>
-                              <div>
-                                <div className="font-medium text-gray-900">{method.name}</div>
-                                <div className="text-xs text-gray-500">{method.description}</div>
-                              </div>
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  initiatePaymentProcessing(method.id)
+                                }
+                                className="w-full flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 transition-all duration-200 text-left"
+                              >
+                                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                                  {method.type === "image" ? (
+                                    <Image
+                                      src={method.icon}
+                                      alt={method.name}
+                                      width={24}
+                                      height={24}
+                                      className="object-contain"
+                                    />
+                                  ) : (
+                                    <span className="text-xl">
+                                      {method.icon}
+                                    </span>
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900">
+                                    {method.name}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {method.description}
+                                  </div>
+                                </div>
+                              </button>
+                            )}
+                          </div>
+                        ))}
                     </div>
                   </div>
 
                   {/* Other Methods */}
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700 mb-3">Other payment methods</h3>
+                    <h3 className="text-sm font-medium text-gray-700 mb-3">
+                      Other payment methods
+                    </h3>
                     <div className="space-y-2">
-                      {paymentMethods.filter(method => !method.popular).map((method) => (
-                        <div key={method.id}>
-                          {method.id === "netbanking" ? (
-                            <div className="border border-gray-200 rounded-lg overflow-hidden hover:border-orange-300 transition-colors">
-                              <button
-                                onClick={() => setShowBankDropdown(!showBankDropdown)}
-                                className="w-full flex items-center justify-between p-4 hover:bg-orange-50 transition-colors text-left"
-                              >
-                                <div className="flex items-center space-x-3">
-                                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                                    {getCategoryIcon(method.category)}
+                      {paymentMethods
+                        .filter((method) => !method.popular)
+                        .map((method) => (
+                          <div key={method.id}>
+                            {method.id === "netbanking" ? (
+                              <div className="border border-gray-200 rounded-lg overflow-hidden hover:border-orange-300 transition-colors">
+                                <button
+                                  onClick={() =>
+                                    setShowBankDropdown(!showBankDropdown)
+                                  }
+                                  className="w-full flex items-center justify-between p-4 hover:bg-orange-50 transition-colors text-left"
+                                >
+                                  <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                                      {getCategoryIcon(method.category)}
+                                    </div>
+                                    <div>
+                                      <div className="font-medium text-gray-900">
+                                        {method.name}
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        {method.description}
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div>
-                                    <div className="font-medium text-gray-900">{method.name}</div>
-                                    <div className="text-xs text-gray-500">{method.description}</div>
-                                  </div>
-                                </div>
-                                <ChevronDown
-                                  className={`w-5 h-5 text-gray-400 transform transition-transform duration-200 ${
-                                    showBankDropdown ? "rotate-180" : ""
-                                  }`}
-                                />
-                              </button>
-                              {showBankDropdown && (
-                                <div className="border-t border-gray-200 bg-gray-50">
-                                  <div className="p-2 space-y-1">
-                                    {banks.map((bank) => (
-                                      <button
-                                        key={bank.id}
-                                        onClick={() => handleBankSelection(bank.id)}
-                                        className="w-full flex items-center space-x-3 p-3 hover:bg-white hover:shadow-sm transition-all duration-150 text-left rounded-lg"
-                                      >
-                                        <div className="w-8 h-8 bg-white rounded-lg shadow-sm flex items-center justify-center">
-                                          <Image
-                                            src={bank.icon}
-                                            alt={bank.name}
-                                            width={24}
-                                            height={24}
-                                            className="object-contain"
-                                          />
-                                        </div>
-                                        <span className="font-medium text-gray-700">{bank.name}</span>
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => initiatePaymentProcessing(method.id)}
-                              className="w-full flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 transition-all duration-200 text-left"
-                            >
-                              <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-                                {method.type === "image" ? (
-                                  <Image
-                                    src={method.icon}
-                                    alt={method.name}
-                                    width={24}
-                                    height={24}
-                                    className="object-contain"
+                                  <ChevronDown
+                                    className={`w-5 h-5 text-gray-400 transform transition-transform duration-200 ${
+                                      showBankDropdown ? "rotate-180" : ""
+                                    }`}
                                   />
-                                ) : (
-                                  <span className="text-xl">{method.icon}</span>
+                                </button>
+                                {showBankDropdown && (
+                                  <div className="border-t border-gray-200 bg-gray-50">
+                                    <div className="p-2 space-y-1">
+                                      {banks.map((bank) => (
+                                        <button
+                                          key={bank.id}
+                                          onClick={() =>
+                                            handleBankSelection(bank.id)
+                                          }
+                                          className="w-full flex items-center space-x-3 p-3 hover:bg-white hover:shadow-sm transition-all duration-150 text-left rounded-lg"
+                                        >
+                                          <div className="w-8 h-8 bg-white rounded-lg shadow-sm flex items-center justify-center">
+                                            <Image
+                                              src={bank.icon}
+                                              alt={bank.name}
+                                              width={24}
+                                              height={24}
+                                              className="object-contain"
+                                            />
+                                          </div>
+                                          <span className="font-medium text-gray-700">
+                                            {bank.name}
+                                          </span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
                                 )}
                               </div>
-                              <div>
-                                <div className="font-medium text-gray-900">{method.name}</div>
-                                <div className="text-xs text-gray-500">{method.description}</div>
-                              </div>
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  initiatePaymentProcessing(method.id)
+                                }
+                                className="w-full flex items-center space-x-3 p-4 border border-gray-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 transition-all duration-200 text-left"
+                              >
+                                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                                  {method.type === "image" ? (
+                                    <Image
+                                      src={method.icon}
+                                      alt={method.name}
+                                      width={24}
+                                      height={24}
+                                      className="object-contain"
+                                    />
+                                  ) : (
+                                    <span className="text-xl">
+                                      {method.icon}
+                                    </span>
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900">
+                                    {method.name}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {method.description}
+                                  </div>
+                                </div>
+                              </button>
+                            )}
+                          </div>
+                        ))}
                     </div>
                   </div>
                 </div>
@@ -856,18 +982,22 @@ function RenderPayment() {
                 <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
                 </div>
-                <h3 className="text-xl font-medium mb-3 text-gray-900">Processing Payment</h3>
+                <h3 className="text-xl font-medium mb-3 text-gray-900">
+                  Processing Payment
+                </h3>
                 <p className="text-gray-600 mb-4">
                   {selectedPaymentMethod === "netbanking" && selectedBank ? (
                     <>
-                      Connecting to {banks.find((b) => b.id === selectedBank)?.name}...
+                      Connecting to{" "}
+                      {banks.find((b) => b.id === selectedBank)?.name}...
                     </>
                   ) : (
                     <>
                       Connecting to{" "}
                       {
-                        paymentMethods.find((m) => m.id === selectedPaymentMethod)
-                          ?.name
+                        paymentMethods.find(
+                          (m) => m.id === selectedPaymentMethod
+                        )?.name
                       }
                       ...
                     </>
@@ -885,7 +1015,9 @@ function RenderPayment() {
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Shield className="w-8 h-8 text-blue-600" />
                 </div>
-                <h3 className="text-xl font-medium mb-3 text-gray-900">QuestPay Activated</h3>
+                <h3 className="text-xl font-medium mb-3 text-gray-900">
+                  QuestPay Activated
+                </h3>
                 <p className="text-gray-600 mb-6">
                   Processing your payment through our secure blockchain system.
                 </p>
@@ -893,13 +1025,17 @@ function RenderPayment() {
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                     <div className="flex items-center justify-center space-x-2 text-sm text-green-700">
                       <CheckCircle className="w-4 h-4" />
-                      <span>Wallet connected: {formatAddress(walletState.address)}</span>
+                      <span>
+                        Wallet connected: {formatAddress(walletState.address)}
+                      </span>
                     </div>
                   </div>
                 )}
                 <div className="flex items-center justify-center space-x-2">
                   <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
-                  <span className="text-gray-600">Initializing secure payment...</span>
+                  <span className="text-gray-600">
+                    Initializing secure payment...
+                  </span>
                 </div>
               </div>
             )}
@@ -910,8 +1046,12 @@ function RenderPayment() {
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Shield className="w-8 h-8 text-blue-600" />
                   </div>
-                  <h3 className="text-xl font-medium text-gray-900 mb-2">QuestPay Processing</h3>
-                  <p className="text-gray-600">Secure blockchain payment in progress</p>
+                  <h3 className="text-xl font-medium text-gray-900 mb-2">
+                    QuestPay Processing
+                  </h3>
+                  <p className="text-gray-600">
+                    Secure blockchain payment in progress
+                  </p>
                   {walletState.isConnected && (
                     <div className="mt-3 inline-flex items-center text-xs text-green-600 bg-green-100 px-3 py-1 rounded-full">
                       <Wallet className="w-3 h-3 mr-1" />
@@ -985,10 +1125,11 @@ function RenderPayment() {
                   </p>
                 </div>
                 <div className="text-xs text-gray-500 mb-6">
-                  Transaction ID: #{Math.random().toString(36).substr(2, 9).toUpperCase()}
+                  Transaction ID: #
+                  {Math.random().toString(36).substr(2, 9).toUpperCase()}
                 </div>
                 <button
-                  onClick={() => router.push('/')}
+                  onClick={() => router.push("/")}
                   className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 py-3 px-8 rounded-lg font-medium transition-colors"
                 >
                   Continue Shopping
@@ -1005,7 +1146,8 @@ function RenderPayment() {
                   Payment Failed
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  An error occurred while processing your payment. Please try again.
+                  An error occurred while processing your payment. Please try
+                  again.
                 </p>
                 <button
                   onClick={() => setPaymentStep("selection")}
