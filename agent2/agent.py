@@ -483,16 +483,10 @@ class TransactionRouterRecoveryAgent:
                             transitioned_to_up = self.set_bank_status(bank_id, status)
                             if transitioned_to_up:
                                 logger.info(f"Bank {bank_id} transitioned to UP. Checking for user debts.")
-                                # Set repayment status in Redis
-                                if self.redis_client and self.signer_address:
-                                    status_key = f"repayment_status:{self.signer_address}"
-                                    self.redis_client.set(status_key, "active", ex=300) # Expires in 5 minutes
-                                    logger.info(f"Set Redis key {status_key} to active for bank {bank_id} activation.")
-
                                 # Run debt check and repayment in a separate thread to avoid blocking
                                 debt_repay_thread = threading.Thread(
                                     target=self._check_and_repay_debts_wrapper,
-                                    args=(bank_id,), # Pass signer_address if needed by wrapper
+                                    args=(bank_id,),
                                     daemon=True,
                                     name=f"DebtRepay_{bank_id}_{time.time()}"
                                 )
@@ -510,12 +504,6 @@ class TransactionRouterRecoveryAgent:
     def _check_and_repay_debts_wrapper(self, bank_id: str):
         result = self._check_and_repay_debts(bank_id)
         logger.info(f"Debt repayment result for bank {bank_id}: {result}")
-        # Optionally, clear the status from Redis after completion or failure
-        # For now, we rely on Redis key expiry (EX 300 set earlier)
-        # if self.redis_client and self.signer_address:
-        #     status_key = f"repayment_status:{self.signer_address}"
-        #     self.redis_client.delete(status_key)
-        #     logger.info(f"Cleared Redis key {status_key} after debt repayment attempt.")
 
     def _listen_for_recovery_updates(self):
         logger.info(f"Starting recovery status listener on topic: {RECOVERY_STATUS_UPDATE_TOPIC}")
@@ -608,61 +596,33 @@ class TransactionRouterRecoveryAgent:
                         continue
 
                     try:
-                        if not Web3.is_address(pool_id_for_fallback):
-                            logger.error(f"Invalid primary_pool_id_for_fallback: {pool_id_for_fallback} for tx {tx_id}")
-                            continue
-                        pool_id_for_fallback = Web3.to_checksum_address(pool_id_for_fallback)
-                        merchant_address = Web3.to_checksum_address(merchant_address)
-                        decimals = self.staking_token_contract.functions.decimals().call()
-                        amount_wei = int(float(amount) * 10**decimals)
+                        # Use the existing fallback function instead of inline blockchain logic
+                        from pydantic import BaseModel
 
-                        pool_contract_for_fallback = self._get_liquidity_pool_contract(pool_id_for_fallback)
-                        if not pool_contract_for_fallback:
-                            logger.error(f"Failed to get LiquidityPool contract instance for fallback pool {pool_id_for_fallback} (tx {tx_id}, user {user_id}). Skipping fallback.")
-                            continue
+                        class FallbackPayRequest(BaseModel):
+                            merchantAddress: str
+                            amount: str
 
-                        user_balance = self.staking_token_contract.functions.balanceOf(self.signer_address).call()
-                        if user_balance < amount_wei:
-                            logger.error(f"Insufficient token balance for tx {tx_id}: {user_balance / 10**decimals} tokens, required: {amount_wei / 10**decimals} tokens")
-                            continue
-
-                        current_allowance = self.staking_token_contract.functions.allowance(self.signer_address, pool_id_for_fallback).call()
-                        if current_allowance < amount_wei:
-                            logger.info(f"Insufficient allowance for tx {tx_id}: {current_allowance / 10**decimals} tokens, approving {amount_wei / 10**decimals} tokens")
-                            approve_tx_hash = self._approve_tokens(pool_id_for_fallback, amount_wei, tx_id)
-                            if approve_tx_hash is None:
-                                logger.error(f"Failed to approve tokens for tx {tx_id}")
-                                continue
-                            logger.info(f"Token approval successful for tx {tx_id}: {approve_tx_hash}")
-
-                        params_for_lp_fallback = {
-                            'merchantAddress': merchant_address,
-                            'amount': amount_wei
-                        }
-                        logger.info(f"Calling fallbackPay on LiquidityPool {pool_id_for_fallback} for tx {tx_id} (user {user_id}) with params: {params_for_lp_fallback}")
-
-                        try:
-                            pool_contract_for_fallback.functions.fallbackPay(merchant_address, amount_wei).call({'from': self.signer_address})
-                            logger.debug(f"FallbackPay simulation successful for tx {tx_id}")
-                        except Exception as e:
-                            logger.error(f"FallbackPay simulation failed for tx {tx_id}: {e}")
-                            continue
-
-                        tx_hash = self._send_blockchain_transaction(
-                            pool_contract_for_fallback.functions.fallbackPay,
-                            params_for_lp_fallback,
-                            tx_id
+                        fallback_request = FallbackPayRequest(
+                            merchantAddress=merchant_address,
+                            amount=str(amount)
                         )
 
-                        if tx_hash:
-                            logger.info(f"Fallback transaction {tx_id} for user {user_id} initiated with hash: {tx_hash} via LiquidityPool {pool_id_for_fallback}")
-                        else:
-                            logger.error(f"Fallback transaction {tx_id} for user {user_id} failed to send via LiquidityPool {pool_id_for_fallback}")
+                        logger.info(f"Calling fallback function for tx {tx_id} (user {user_id}) with merchant: {merchant_address}, amount: {amount}")
 
-                    except ValueError as e:
-                        logger.error(f"Invalid parameter format for fallback tx {tx_id} (user {user_id}): {e}. Pool: {pool_id_for_fallback}", exc_info=True)
+                        # Call the fallback_pay_endpoint synchronously using asyncio.run
+                        import asyncio
+                        result = asyncio.run(
+                            fallback_pay_endpoint(fallback_request, self)
+                        )
+
+                        if result.get("success"):
+                            logger.info(f"Fallback payment successful for tx {tx_id} (user {user_id}). Processed: {result.get('total_amount_processed')}, Transactions: {result.get('transactions_count')}")
+                        else:
+                            logger.error(f"Fallback payment failed for tx {tx_id} (user {user_id})")
+
                     except Exception as e:
-                        logger.error(f"General error during fallback process for tx {tx_id} (user {user_id}): {e}. Pool: {pool_id_for_fallback}", exc_info=True)
+                        logger.error(f"Error during fallback process for tx {tx_id} (user {user_id}): {e}", exc_info=True)
 
                 elif specific_bank_status == "unknown":
                     logger.warning(f"Bank status for '{selected_bank}' is '{specific_bank_status}' for tx {tx_id} (user {user_id}). Re-queueing to {TRANSACTION_REQUESTS_QUEUE}.")
@@ -1421,40 +1381,6 @@ async def health_check(agent: TransactionRouterRecoveryAgent = Depends(get_agent
         "bank_statuses": agent.bank_statuses.copy(),
         "active_threads": threads_status
     }
-
-@app.get("/repayment-status/{user_id}")
-async def get_repayment_status(user_id: str, agent: TransactionRouterRecoveryAgent = Depends(get_agent)):
-    logger.debug(f"API request for /repayment-status/{user_id}")
-    if not agent.redis_client:
-        logger.error(f"Redis client not available for repayment status check for {user_id}")
-        raise HTTPException(status_code=503, detail="Service temporarily unavailable")
-    try:
-        # We assume user_id should match the agent's signer_address for this specific notification
-        # In a multi-user system, this would need a different approach.
-        if user_id != agent.signer_address:
-            # Or, if user_id is not meant to be the signer_address, adjust logic.
-            # For now, let's assume the frontend polls with its connected wallet address.
-            logger.warning(f"Requested user_id {user_id} does not match agent's signer_address {agent.signer_address}. This might be okay depending on frontend implementation.")
-
-        status_key = f"repayment_status:{user_id}"
-        status = agent.redis_client.get(status_key)
-
-        if status == "active":
-            logger.info(f"Repayment status for {user_id} is 'active'.")
-            # Optionally delete the key after first fetch to make it a one-time notification
-            # agent.redis_client.delete(status_key)
-            # logger.info(f"Cleared Redis key {status_key} after fetching status.")
-            return {"status": "active"}
-        else:
-            logger.info(f"Repayment status for {user_id} is 'idle' (key not found or not 'active').")
-            return {"status": "idle"}
-
-    except redis.exceptions.ConnectionError as e:
-        logger.error(f"Redis connection error for repayment status check of {user_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=503, detail="Failed to check repayment status due to Redis error")
-    except Exception as e:
-        logger.error(f"Error checking repayment status for {user_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error")
 
 def run_fastapi_server():
     global agent_instance
