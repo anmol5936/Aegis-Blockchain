@@ -29,6 +29,8 @@ POOL_FACTORY_ADDRESS = os.getenv('VITE_POOL_FACTORY_ADDRESS')
 STAKING_TOKEN_ADDRESS = os.getenv('VITE_STAKING_TOKEN_ADDRESS')
 FETCH_INTERVAL_SECONDS = int(os.getenv('AGENT3_FETCH_INTERVAL_SECONDS', 60))
 USER_ADDRESS_TO_MONITOR = os.getenv('AGENT3_USER_ADDRESS_TO_MONITOR', '0x6f6a29CD4b0fd655866c5f1A7fE3Fba89EfF7356')
+# Add SIGNER_ADDRESS for user stake queries
+SIGNER_ADDRESS = os.getenv('SIGNER_ADDRESS', USER_ADDRESS_TO_MONITOR)
 API_PORT = int(os.getenv('API_PORT', 8765))
 
 # Pydantic Models
@@ -58,6 +60,7 @@ class PoolData(BaseModel):
     rewardsPot: float
     apy: float
     lpTokenSupply: float
+    userStake: Optional[StakeInfo]  # Add user stake info to the model
     lastUpdated: datetime
 
 class UserData(BaseModel):
@@ -170,6 +173,7 @@ class LiquidityPoolService:
                     user_debt = 0
                     user_debts = []
                     stakers = []
+                    user_stake = None
                     
                     if USER_ADDRESS_TO_MONITOR:
                         user_debt = pool_contract.functions.getActiveDebtAmount(USER_ADDRESS_TO_MONITOR).call()
@@ -177,6 +181,11 @@ class LiquidityPoolService:
                         stake_info = await self._get_user_stake_info(pool_address, USER_ADDRESS_TO_MONITOR)
                         if stake_info and stake_info['stakedAmount'] > 0:
                             stakers.append(stake_info)
+
+                    # Get user stake info for SIGNER_ADDRESS (always include, even if 0)
+                    if SIGNER_ADDRESS:
+                        user_stake = await self._get_user_stake_info(pool_address, SIGNER_ADDRESS)
+                        logger.info(f"Fetched stake for pool {pool_address[:8]}...: {user_stake}")
 
                     pool_data = {
                         'id': pool_address,
@@ -198,6 +207,7 @@ class LiquidityPoolService:
                         'rewardsPot': float(Web3.from_wei(rewards_pot, 'ether')),
                         'apy': apy / 100,
                         'lpTokenSupply': float(Web3.from_wei(lp_token_supply, 'ether')),
+                        'userStake': user_stake,  # Include user stake info
                         'lastUpdated': datetime.now()
                     }
                     pools_data.append(pool_data)
@@ -229,15 +239,19 @@ class LiquidityPoolService:
             pool_contract = self.w3.eth.contract(address=Web3.to_checksum_address(pool_address), abi=self.LIQUIDITY_POOL_ABI)
             stake = pool_contract.functions.getStake(user_address).call()
             
-            return {
+            stake_info = {
                 'userId': user_address,
                 'stakedAmount': float(Web3.from_wei(stake[0], 'ether')),
                 'collateralAmount': float(Web3.from_wei(stake[1], 'ether')),
                 'lpTokensMinted': float(Web3.from_wei(stake[2], 'ether')),
                 'stakeTimestamp': stake[3]
             }
+            
+            logger.debug(f"Fetched stake for {user_address} in pool {pool_address[:8]}...: {stake_info}")
+            return stake_info
+            
         except Exception as e:
-            logger.error(f"Error fetching stake info: {e}")
+            logger.error(f"Error fetching stake info for {user_address} in pool {pool_address}: {e}")
             return None
 
     async def fetch_user_data(self, user_address: str) -> Optional[Dict]:
@@ -340,13 +354,14 @@ async def root():
         "version": "1.0.0",
         "timestamp": datetime.now(),
         "pools_count": len(service.pools_data),
-        "last_fetch": service.last_fetch_time
+        "last_fetch": service.last_fetch_time,
+        "signer_address": SIGNER_ADDRESS
     }
 
 @app.get("/pools", response_model=PoolsResponse)
 async def get_pools(sort_by: str = "liquidity_asc"):
     """
-    Get all pools ordered by liquidity (ascending by default)
+    Get all pools ordered by liquidity (ascending by default) with user stake information
     
     Parameters:
     - sort_by: 'liquidity_asc', 'liquidity_desc', 'apy_desc', 'apy_asc'
@@ -438,7 +453,8 @@ async def get_stats():
         "lastFetchTime": service.last_fetch_time,
         "redisConnected": service.redis_client is not None,
         "web3Connected": service.w3 is not None and service.w3.is_connected(),
-        "monitoredUser": USER_ADDRESS_TO_MONITOR
+        "monitoredUser": USER_ADDRESS_TO_MONITOR,
+        "signerAddress": SIGNER_ADDRESS
     }
 
 if __name__ == "__main__":

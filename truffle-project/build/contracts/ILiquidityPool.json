@@ -161,29 +161,17 @@
   "deployedGeneratedSources": [],
   "sourceMap": "",
   "deployedSourceMap": "",
-  "source": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.19;\n\nimport \"./IERC20.sol\";\nimport \"./LPERC20.sol\";\n\ninterface IPoolFactory {\n    function getPools() external view returns (address[] memory);\n}\n\n// Define Stake struct outside the contract to make it accessible to the interface\nstruct Stake {\n    uint256 stakedAmount;\n    uint256 collateralAmount;\n    uint256 lpTokensMinted;\n    uint256 stakeTimestamp;\n}\n\ninterface ILiquidityPool {\n    function getStake(address user) external view returns (Stake memory);\n    function getCollateralAvailable(address user) external view returns (uint256);\n    function totalLiquidity() external view returns (uint256);\n    function getStakedAmount(address user) external view returns (uint256);\n    function transferLiquidityToPool(address targetPool, address user, uint256 amount) external;\n    function contributeLiquidityForPayment(address targetPool, address user, uint256 amount) external;\n    function receiveLiquidity(uint256 amount) external; // New function\n}\n\ncontract LiquidityPool {\n    address public immutable factoryOwner;\n    address public immutable poolFactory;\n    string public regionName;\n    IERC20 public stakingToken;\n    LPERC20 public lpToken;\n    uint256 public totalLiquidityStaked;\n    PoolStatusContract public status;\n    uint256 public rewardsPot;\n    uint256 public apyBasisPoints = 500;\n    uint256 public totalDebt;\n    uint256 public constant COLLATERAL_PERCENTAGE_BP = 2000;\n    uint256 public constant UNSTAKE_TIME_LOCK_DURATION = 24 hours;\n    uint256 public constant BASIS_POINTS = 10000;\n    mapping(address => Stake) public stakers;\n    mapping(address => Debt[]) public userDebts;\n    mapping(address => uint256) public debtRelatedUnstakeTimelock;\n\n    struct Debt {\n        address user;\n        address merchantAddress;\n        uint256 amount;\n        uint256 timestamp;\n        bool isRepaid;\n    }\n\n    enum PoolStatusContract { ACTIVE, PAUSED, INACTIVE }\n\n    event Staked(address indexed user, uint256 amountStaked, uint256 lpTokensReceived);\n    event Unstaked(address indexed user, uint256 amountUnstaked, uint256 lpTokensBurned);\n    event FallbackPaymentMade(address indexed user, address indexed merchant, uint256 amount, address poolUsed);\n    event DebtRepaid(address indexed user, uint256 amountRepaid);\n    event RewardsDistributed(uint256 totalRewardsDistributed, uint256 timestamp);\n    event PoolStatusChanged(PoolStatusContract newStatus);\n    event ApyUpdated(uint256 newApyBasisPoints);\n    event RewardsAdded(uint256 amount);\n\n    modifier onlyFactoryOwner() {\n        require(msg.sender == factoryOwner, \"Not factory owner\");\n        _;\n    }\n\n    modifier whenActive() {\n        require(status == PoolStatusContract.ACTIVE, \"Pool not active\");\n        _;\n    }\n\n    constructor(string memory _regionName, address _factoryOwner, address _stakingTokenAddress, address _poolFactory) {\n        regionName = _regionName;\n        factoryOwner = _factoryOwner;\n        poolFactory = _poolFactory;\n        stakingToken = IERC20(_stakingTokenAddress);\n        status = PoolStatusContract.ACTIVE;\n        lpToken = new LPERC20(\n            string(abi.encodePacked(\"AegisLP-\", _regionName)),\n            string(abi.encodePacked(\"ALP-\", _regionName)),\n            address(this)\n        );\n    }\n\n    function getPoolStatus() external view returns (PoolStatusContract) {\n        return status;\n    }\n\n    function totalLiquidity() external view returns (uint256) {\n        return totalLiquidityStaked;\n    }\n\n    function apy() external view returns (uint256) {\n        return apyBasisPoints;\n    }\n\n    function lpTokenSupply() external view returns (uint256) {\n        return lpToken.totalSupply();\n    }\n\n    function getStake(address _user) external view returns (Stake memory) {\n        return stakers[_user];\n    }\n\n    function getUserDebts(address _user) external view returns (Debt[] memory) {\n        return userDebts[_user];\n    }\n\n    function getCollateralAvailable(address _user) external view returns (uint256) {\n        uint256 totalDebt = 0;\n        Debt[] memory debts = userDebts[_user];\n        for (uint256 i = 0; i < debts.length; i++) {\n            if (!debts[i].isRepaid) {\n                totalDebt += debts[i].amount;\n            }\n        }\n        return stakers[_user].collateralAmount > totalDebt ? stakers[_user].collateralAmount - totalDebt : 0;\n    }\n\n    function getActiveDebtAmount(address _user) external view returns (uint256) {\n        uint256 tb = 0;\n        Debt[] memory debts = userDebts[_user];\n        for (uint256 i = 0; i < debts.length; i++) {\n            if (!debts[i].isRepaid) {\n                tb += debts[i].amount;\n            }\n        }\n        return tb;\n    }\n\n    function getTotalDebt() external view returns (uint256) {\n        return totalDebt;\n    }\n\n    function toggleStatus() external onlyFactoryOwner {\n        if (status == PoolStatusContract.ACTIVE) {\n            status = PoolStatusContract.PAUSED;\n        } else if (status == PoolStatusContract.PAUSED) {\n            status = PoolStatusContract.ACTIVE;\n        }\n        emit PoolStatusChanged(status);\n    }\n\n    function setStatus(PoolStatusContract _newStatus) external onlyFactoryOwner {\n        status = _newStatus;\n        emit PoolStatusChanged(status);\n    }\n\n    function setApy(uint256 _newApyBasisPoints) external onlyFactoryOwner {\n        require(_newApyBasisPoints <= 5000, \"APY exceeds 50%\");\n        apyBasisPoints = _newApyBasisPoints;\n        emit ApyUpdated(_newApyBasisPoints);\n    }\n\n    function addRewardsToPot(uint256 amount) external onlyFactoryOwner {\n        require(amount > 0, \"Amount must be > 0\");\n        rewardsPot += amount;\n        emit RewardsAdded(amount);\n    }\n\n    function stake(uint256 _amount) external whenActive {\n        require(_amount > 0, \"Amount must be > 0\");\n        require(stakingToken.transferFrom(msg.sender, address(this), _amount), \"Token transfer failed\");\n        uint256 collateralAmount = (_amount * COLLATERAL_PERCENTAGE_BP) / BASIS_POINTS;\n        uint256 lpTokensToMint;\n        if (lpToken.totalSupply() == 0) {\n            lpTokensToMint = _amount;\n        } else {\n            lpTokensToMint = (_amount * lpToken.totalSupply()) / totalLiquidityStaked;\n        }\n        Stake storage userStake = stakers[msg.sender];\n        userStake.stakedAmount += _amount;\n        userStake.collateralAmount += collateralAmount;\n        userStake.lpTokensMinted += lpTokensToMint;\n        userStake.stakeTimestamp = block.timestamp;\n        totalLiquidityStaked += _amount;\n        lpToken.mint(msg.sender, lpTokensToMint);\n        emit Staked(msg.sender, _amount, lpTokensToMint);\n    }\n\n    function unstake(uint256 _lpTokenAmount) external whenActive {\n        require(_lpTokenAmount > 0, \"LP token amount must be > 0\");\n        Stake storage userStake = stakers[msg.sender];\n        require(userStake.lpTokensMinted >= _lpTokenAmount, \"Insufficient LP tokens\");\n        uint256 proportionBasisPoints = (_lpTokenAmount * BASIS_POINTS) / userStake.lpTokensMinted;\n        uint256 stakedAmountToReturn = (userStake.stakedAmount * proportionBasisPoints) / BASIS_POINTS;\n        uint256 collateralToReduce = (userStake.collateralAmount * proportionBasisPoints) / BASIS_POINTS;\n        uint256 remainingCollateral = userStake.collateralAmount - collateralToReduce;\n        uint256 activeDebt = this.getActiveDebtAmount(msg.sender);\n        require(remainingCollateral >= activeDebt, \"Insufficient collateral\");\n        userStake.stakedAmount -= stakedAmountToReturn;\n        userStake.collateralAmount -= collateralToReduce;\n        userStake.lpTokensMinted -= _lpTokenAmount;\n        totalLiquidityStaked -= stakedAmountToReturn;\n        lpToken.burn(msg.sender, _lpTokenAmount);\n        require(stakingToken.transfer(msg.sender, stakedAmountToReturn), \"Token transfer failed\");\n        emit Unstaked(msg.sender, stakedAmountToReturn, _lpTokenAmount);\n    }\n\n    function getTotalCollateralAcrossPools(address user) public view returns (uint256) {\n        uint256 totalCollateral = stakers[user].collateralAmount;\n        address[] memory allPools = IPoolFactory(poolFactory).getPools();\n        for (uint256 i = 0; i < allPools.length; i++) {\n            if (allPools[i] != address(this)) {\n                try ILiquidityPool(allPools[i]).getStake(user) returns (Stake memory userStakeInPool) {\n                    totalCollateral += userStakeInPool.collateralAmount;\n                } catch {\n                    continue;\n                }\n            }\n        }\n        return totalCollateral;\n    }\n\n    function redistributeFundsFromPools(address user, uint256 requiredAmount, uint256 currentPoolAvailable) internal returns (uint256 redistributedAmount) {\n        uint256 stillNeeded = requiredAmount - currentPoolAvailable;\n        redistributedAmount = currentPoolAvailable;\n        address[] memory allPools = IPoolFactory(poolFactory).getPools();\n        for (uint256 i = 0; i < allPools.length; i++) {\n            if (stillNeeded == 0) break;\n            address poolAddress = allPools[i];\n            if (poolAddress == address(this)) continue;\n            try ILiquidityPool(poolAddress).getCollateralAvailable(user) returns (uint256 poolCollateral) {\n                try ILiquidityPool(poolAddress).totalLiquidity() returns (uint256 poolLiquidity) {\n                    uint256 canTakeFromPool = poolCollateral > stillNeeded ? stillNeeded : poolCollateral;\n                    if (poolLiquidity >= canTakeFromPool && canTakeFromPool > 0) {\n                        try ILiquidityPool(poolAddress).transferLiquidityToPool(address(this), user, canTakeFromPool) {\n                            redistributedAmount += canTakeFromPool;\n                            stillNeeded -= canTakeFromPool;\n                        } catch {\n                            continue;\n                        }\n                    }\n                } catch {\n                    continue;\n                }\n            } catch {\n                continue;\n            }\n        }\n        return redistributedAmount;\n    }\n\n    function addLiquidityFromNewPools(address user, uint256 requiredAmount, uint256 currentAvailable) internal returns (uint256 totalAvailable) {\n        uint256 stillNeeded = requiredAmount - currentAvailable;\n        totalAvailable = currentAvailable;\n        address[] memory allPools = IPoolFactory(poolFactory).getPools();\n        for (uint256 i = 0; i < allPools.length; i++) {\n            if (stillNeeded == 0) break;\n            address poolAddress = allPools[i];\n            if (poolAddress == address(this)) continue;\n            try ILiquidityPool(poolAddress).getStakedAmount(user) returns (uint256 userStakeInPool) {\n                uint256 userCollateralInPool = (userStakeInPool * COLLATERAL_PERCENTAGE_BP) / BASIS_POINTS;\n                uint256 availableFromPool = userCollateralInPool > stillNeeded ? stillNeeded : userCollateralInPool;\n                try ILiquidityPool(poolAddress).totalLiquidity() returns (uint256 poolLiquidity) {\n                    if (availableFromPool > 0 && poolLiquidity >= availableFromPool) {\n                        try ILiquidityPool(poolAddress).contributeLiquidityForPayment(address(this), user, availableFromPool) {\n                            totalAvailable += availableFromPool;\n                            stillNeeded -= availableFromPool;\n                        } catch {\n                            continue;\n                        }\n                    }\n                } catch {\n                    continue;\n                }\n            } catch {\n                continue;\n            }\n        }\n        return totalAvailable;\n    }\n\n    function fallbackPay(address _merchantAddress, uint256 _amount) external whenActive {\n        require(_amount > 0, \"Amount must be > 0\");\n        require(_merchantAddress != address(0), \"Invalid merchant address\");\n        uint256 totalCollateralAcrossPools = getTotalCollateralAcrossPools(msg.sender);\n        uint256 currentPoolCollateral = this.getCollateralAvailable(msg.sender);\n        uint256 currentPoolLiquidity = totalLiquidityStaked;\n        if (currentPoolCollateral >= _amount && currentPoolLiquidity >= _amount) {\n            executeOriginalFallbackPay(_merchantAddress, _amount);\n            return;\n        }\n        uint256 availableAfterRedistribution = currentPoolCollateral;\n        if (currentPoolLiquidity < _amount) {\n            availableAfterRedistribution = redistributeFundsFromPools(msg.sender, _amount, currentPoolCollateral);\n        }\n        uint256 finalAvailableAmount = availableAfterRedistribution;\n        if (finalAvailableAmount < _amount) {\n            finalAvailableAmount = addLiquidityFromNewPools(msg.sender, _amount, availableAfterRedistribution);\n        }\n        require(finalAvailableAmount >= _amount, \"Insufficient liquidity\");\n        require(_amount <= totalCollateralAcrossPools, \"Exceeds collateral limit\");\n        executeOriginalFallbackPay(_merchantAddress, _amount);\n    }\n\n    function executeOriginalFallbackPay(address _merchantAddress, uint256 _amount) internal {\n        require(totalLiquidityStaked >= _amount, \"Insufficient pool liquidity\");\n        uint256 lpTokensToBurn;\n        if (lpToken.totalSupply() == 0) {\n            revert(\"No LP tokens to burn\");\n        } else {\n            lpTokensToBurn = (_amount * lpToken.totalSupply()) / totalLiquidityStaked;\n        }\n        require(lpToken.balanceOf(msg.sender) >= lpTokensToBurn, \"Insufficient LP tokens\");\n        Stake storage userStake = stakers[msg.sender];\n        require(userStake.lpTokensMinted >= lpTokensToBurn, \"Insufficient minted LP tokens\");\n        userStake.lpTokensMinted -= lpTokensToBurn;\n        userStake.stakedAmount -= _amount;\n        userStake.collateralAmount = (userStake.stakedAmount * COLLATERAL_PERCENTAGE_BP) / BASIS_POINTS;\n        totalLiquidityStaked -= _amount;\n        lpToken.burn(msg.sender, lpTokensToBurn);\n        userDebts[msg.sender].push(Debt({\n            user: msg.sender,\n            merchantAddress: _merchantAddress,\n            amount: _amount,\n            timestamp: block.timestamp,\n            isRepaid: false\n        }));\n        totalDebt += _amount;\n        uint256 newTimelock = block.timestamp + UNSTAKE_TIME_LOCK_DURATION;\n        if (newTimelock > debtRelatedUnstakeTimelock[msg.sender]) {\n            debtRelatedUnstakeTimelock[msg.sender] = newTimelock;\n        }\n        require(stakingToken.transfer(_merchantAddress, _amount), \"Payment transfer failed\");\n        emit FallbackPaymentMade(msg.sender, _merchantAddress, _amount, address(this));\n    }\n\n    function repayDebt(uint256 _debtIndex, uint256 _amount) external whenActive {\n        require(_amount > 0, \"Amount must be > 0\");\n        require(_debtIndex < userDebts[msg.sender].length, \"Invalid debt index\");\n        Debt storage debt = userDebts[msg.sender][_debtIndex];\n        require(!debt.isRepaid, \"Debt already repaid\");\n        require(_amount <= debt.amount, \"Amount exceeds debt\");\n        require(stakingToken.transferFrom(msg.sender, address(this), _amount), \"Repayment transfer failed\");\n        if (_amount == debt.amount) {\n            debt.isRepaid = true;\n        } else {\n            debt.amount -= _amount;\n        }\n        totalDebt -= _amount;\n        if (this.getActiveDebtAmount(msg.sender) == 0) {\n            debtRelatedUnstakeTimelock[msg.sender] = 0;\n        }\n        emit DebtRepaid(msg.sender, _amount);\n    }\n\n    function distributeRewards() external onlyFactoryOwner whenActive {\n        require(rewardsPot > 0, \"No rewards to distribute\");\n        require(lpToken.totalSupply() > 0, \"No LP tokens to distribute\");\n        uint256 rewardsToDistribute = rewardsPot;\n        rewardsPot = 0;\n        emit RewardsDistributed(rewardsToDistribute, block.timestamp);\n    }\n\n    function emergencyWithdraw() external onlyFactoryOwner {\n        require(status == PoolStatusContract.INACTIVE, \"Pool must be inactive\");\n        uint256 balance = stakingToken.balanceOf(address(this));\n        if (balance > 0) {\n            stakingToken.transfer(factoryOwner, balance);\n        }\n    }\n\n   function transferLiquidityToPool(address targetPool, address user, uint256 amount) external {\n    require(msg.sender != address(0), \"Invalid caller\");\n    require(amount > 0, \"Amount must be > 0\");\n    require(totalLiquidityStaked >= amount, \"Insufficient liquidity\");\n    address[] memory allPools = IPoolFactory(poolFactory).getPools();\n    bool isValidPool = false;\n    for (uint256 i = 0; i < allPools.length; i++) {\n        if (allPools[i] == msg.sender || allPools[i] == targetPool) {\n            isValidPool = true;\n            break;\n        }\n    }\n    require(isValidPool, \"Unauthorized transfer\");\n    require(stakingToken.transfer(targetPool, amount), \"Transfer failed\");\n    totalLiquidityStaked -= amount;\n    // Notify target pool to increase its liquidity\n    ILiquidityPool(targetPool).receiveLiquidity(amount);\n}\n\n   function contributeLiquidityForPayment(address targetPool, address user, uint256 amount) external {\n    require(msg.sender != address(0), \"Invalid caller\");\n    require(amount > 0, \"Amount must be > 0\");\n    require(totalLiquidityStaked >= amount, \"Insufficient liquidity\");\n    Stake storage userStake = stakers[user];\n    uint256 userCollateral = (userStake.stakedAmount * COLLATERAL_PERCENTAGE_BP) / BASIS_POINTS;\n    require(userCollateral >= amount, \"Insufficient collateral\");\n    address[] memory allPools = IPoolFactory(poolFactory).getPools();\n    bool isValidPool = false;\n    for (uint256 i = 0; i < allPools.length; i++) {\n        if (allPools[i] == msg.sender || allPools[i] == targetPool) {\n            isValidPool = true;\n            break;\n        }\n    }\n    require(isValidPool, \"Unauthorized contribution\");\n    require(stakingToken.transfer(targetPool, amount), \"Contribution transfer failed\");\n    totalLiquidityStaked -= amount;\n    // Notify target pool to increase its liquidity\n    ILiquidityPool(targetPool).receiveLiquidity(amount);\n}\n\nfunction receiveLiquidity(uint256 amount) external {\n    require(msg.sender != address(0), \"Invalid caller\");\n    address[] memory allPools = IPoolFactory(poolFactory).getPools();\n    bool isValidPool = false;\n    for (uint256 i = 0; i < allPools.length; i++) {\n        if (allPools[i] == msg.sender) {\n            isValidPool = true;\n            break;\n        }\n    }\n    require(isValidPool, \"Unauthorized caller\");\n    totalLiquidityStaked += amount;\n}\n    function getStakedAmount(address user) external view returns (uint256) {\n        return stakers[user].stakedAmount;\n    }\n}",
-  "sourcePath": "/Users/sohamsamal/Desktop/Coding/Hackathon Projects/Hackon/Ageis-Blockchain/truffle-project/contracts/LiquidityPool.sol",
+  "source": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.19;\r\n\r\nimport \"./IERC20.sol\";\r\nimport \"./LPERC20.sol\";\r\n\r\ninterface IPoolFactory {\r\n    function getPools() external view returns (address[] memory);\r\n}\r\n\r\n// Define Stake struct outside the contract to make it accessible to the interface\r\nstruct Stake {\r\n    uint256 stakedAmount;\r\n    uint256 collateralAmount;\r\n    uint256 lpTokensMinted;\r\n    uint256 stakeTimestamp;\r\n}\r\n\r\ninterface ILiquidityPool {\r\n    function getStake(address user) external view returns (Stake memory);\r\n    function getCollateralAvailable(address user) external view returns (uint256);\r\n    function totalLiquidity() external view returns (uint256);\r\n    function getStakedAmount(address user) external view returns (uint256);\r\n    function transferLiquidityToPool(address targetPool, address user, uint256 amount) external;\r\n    function contributeLiquidityForPayment(address targetPool, address user, uint256 amount) external;\r\n    function receiveLiquidity(uint256 amount) external; // New function\r\n}\r\n\r\ncontract LiquidityPool {\r\n    address public immutable factoryOwner;\r\n    address public immutable poolFactory;\r\n    string public regionName;\r\n    IERC20 public stakingToken;\r\n    LPERC20 public lpToken;\r\n    uint256 public totalLiquidityStaked;\r\n    PoolStatusContract public status;\r\n    uint256 public rewardsPot;\r\n    uint256 public apyBasisPoints = 500;\r\n    uint256 public totalDebt;\r\n    uint256 public constant COLLATERAL_PERCENTAGE_BP = 2000;\r\n    uint256 public constant UNSTAKE_TIME_LOCK_DURATION = 24 hours;\r\n    uint256 public constant BASIS_POINTS = 10000;\r\n    mapping(address => Stake) public stakers;\r\n    mapping(address => Debt[]) public userDebts;\r\n    mapping(address => uint256) public debtRelatedUnstakeTimelock;\r\n\r\n    struct Debt {\r\n        address user;\r\n        address merchantAddress;\r\n        uint256 amount;\r\n        uint256 timestamp;\r\n        bool isRepaid;\r\n    }\r\n\r\n    enum PoolStatusContract { ACTIVE, PAUSED, INACTIVE }\r\n\r\n    event Staked(address indexed user, uint256 amountStaked, uint256 lpTokensReceived);\r\n    event Unstaked(address indexed user, uint256 amountUnstaked, uint256 lpTokensBurned);\r\n    event FallbackPaymentMade(address indexed user, address indexed merchant, uint256 amount, address poolUsed);\r\n    event DebtRepaid(address indexed user, uint256 amountRepaid);\r\n    event RewardsDistributed(uint256 totalRewardsDistributed, uint256 timestamp);\r\n    event PoolStatusChanged(PoolStatusContract newStatus);\r\n    event ApyUpdated(uint256 newApyBasisPoints);\r\n    event RewardsAdded(uint256 amount);\r\n\r\n    modifier onlyFactoryOwner() {\r\n        require(msg.sender == factoryOwner, \"Not factory owner\");\r\n        _;\r\n    }\r\n\r\n    modifier whenActive() {\r\n        require(status == PoolStatusContract.ACTIVE, \"Pool not active\");\r\n        _;\r\n    }\r\n\r\n    constructor(string memory _regionName, address _factoryOwner, address _stakingTokenAddress, address _poolFactory) {\r\n        regionName = _regionName;\r\n        factoryOwner = _factoryOwner;\r\n        poolFactory = _poolFactory;\r\n        stakingToken = IERC20(_stakingTokenAddress);\r\n        status = PoolStatusContract.ACTIVE;\r\n        lpToken = new LPERC20(\r\n            string(abi.encodePacked(\"AegisLP-\", _regionName)),\r\n            string(abi.encodePacked(\"ALP-\", _regionName)),\r\n            address(this)\r\n        );\r\n    }\r\n\r\n    function getPoolStatus() external view returns (PoolStatusContract) {\r\n        return status;\r\n    }\r\n\r\n    function totalLiquidity() external view returns (uint256) {\r\n        return totalLiquidityStaked;\r\n    }\r\n\r\n    function apy() external view returns (uint256) {\r\n        return apyBasisPoints;\r\n    }\r\n\r\n    function lpTokenSupply() external view returns (uint256) {\r\n        return lpToken.totalSupply();\r\n    }\r\n\r\n    function getStake(address _user) external view returns (Stake memory) {\r\n        return stakers[_user];\r\n    }\r\n\r\n    function getUserDebts(address _user) external view returns (Debt[] memory) {\r\n        return userDebts[_user];\r\n    }\r\n\r\n    function getCollateralAvailable(address _user) external view returns (uint256) {\r\n        uint256 totalDebt = 0;\r\n        Debt[] memory debts = userDebts[_user];\r\n        for (uint256 i = 0; i < debts.length; i++) {\r\n            if (!debts[i].isRepaid) {\r\n                totalDebt += debts[i].amount;\r\n            }\r\n        }\r\n        return stakers[_user].collateralAmount > totalDebt ? stakers[_user].collateralAmount - totalDebt : 0;\r\n    }\r\n\r\n    function getActiveDebtAmount(address _user) external view returns (uint256) {\r\n        uint256 tb = 0;\r\n        Debt[] memory debts = userDebts[_user];\r\n        for (uint256 i = 0; i < debts.length; i++) {\r\n            if (!debts[i].isRepaid) {\r\n                tb += debts[i].amount;\r\n            }\r\n        }\r\n        return tb;\r\n    }\r\n\r\n    function getTotalDebt() external view returns (uint256) {\r\n        return totalDebt;\r\n    }\r\n\r\n    function toggleStatus() external onlyFactoryOwner {\r\n        if (status == PoolStatusContract.ACTIVE) {\r\n            status = PoolStatusContract.PAUSED;\r\n        } else if (status == PoolStatusContract.PAUSED) {\r\n            status = PoolStatusContract.ACTIVE;\r\n        }\r\n        emit PoolStatusChanged(status);\r\n    }\r\n\r\n    function setStatus(PoolStatusContract _newStatus) external onlyFactoryOwner {\r\n        status = _newStatus;\r\n        emit PoolStatusChanged(status);\r\n    }\r\n\r\n    function setApy(uint256 _newApyBasisPoints) external onlyFactoryOwner {\r\n        require(_newApyBasisPoints <= 5000, \"APY exceeds 50%\");\r\n        apyBasisPoints = _newApyBasisPoints;\r\n        emit ApyUpdated(_newApyBasisPoints);\r\n    }\r\n\r\n    function addRewardsToPot(uint256 amount) external onlyFactoryOwner {\r\n        require(amount > 0, \"Amount must be > 0\");\r\n        rewardsPot += amount;\r\n        emit RewardsAdded(amount);\r\n    }\r\n\r\n    function stake(uint256 _amount) external whenActive {\r\n        require(_amount > 0, \"Amount must be > 0\");\r\n        require(stakingToken.transferFrom(msg.sender, address(this), _amount), \"Token transfer failed\");\r\n        uint256 collateralAmount = (_amount * COLLATERAL_PERCENTAGE_BP) / BASIS_POINTS;\r\n        uint256 lpTokensToMint;\r\n        if (lpToken.totalSupply() == 0) {\r\n            lpTokensToMint = _amount;\r\n        } else {\r\n            lpTokensToMint = (_amount * lpToken.totalSupply()) / totalLiquidityStaked;\r\n        }\r\n        Stake storage userStake = stakers[msg.sender];\r\n        userStake.stakedAmount += _amount;\r\n        userStake.collateralAmount += collateralAmount;\r\n        userStake.lpTokensMinted += lpTokensToMint;\r\n        userStake.stakeTimestamp = block.timestamp;\r\n        totalLiquidityStaked += _amount;\r\n        lpToken.mint(msg.sender, lpTokensToMint);\r\n        emit Staked(msg.sender, _amount, lpTokensToMint);\r\n    }\r\n\r\n    function unstake(uint256 _lpTokenAmount) external whenActive {\r\n        require(_lpTokenAmount > 0, \"LP token amount must be > 0\");\r\n        Stake storage userStake = stakers[msg.sender];\r\n        require(userStake.lpTokensMinted >= _lpTokenAmount, \"Insufficient LP tokens\");\r\n        uint256 proportionBasisPoints = (_lpTokenAmount * BASIS_POINTS) / userStake.lpTokensMinted;\r\n        uint256 stakedAmountToReturn = (userStake.stakedAmount * proportionBasisPoints) / BASIS_POINTS;\r\n        uint256 collateralToReduce = (userStake.collateralAmount * proportionBasisPoints) / BASIS_POINTS;\r\n        uint256 remainingCollateral = userStake.collateralAmount - collateralToReduce;\r\n        uint256 activeDebt = this.getActiveDebtAmount(msg.sender);\r\n        require(remainingCollateral >= activeDebt, \"Insufficient collateral\");\r\n        userStake.stakedAmount -= stakedAmountToReturn;\r\n        userStake.collateralAmount -= collateralToReduce;\r\n        userStake.lpTokensMinted -= _lpTokenAmount;\r\n        totalLiquidityStaked -= stakedAmountToReturn;\r\n        lpToken.burn(msg.sender, _lpTokenAmount);\r\n        require(stakingToken.transfer(msg.sender, stakedAmountToReturn), \"Token transfer failed\");\r\n        emit Unstaked(msg.sender, stakedAmountToReturn, _lpTokenAmount);\r\n    }\r\n\r\n    function getTotalCollateralAcrossPools(address user) public view returns (uint256) {\r\n        uint256 totalCollateral = stakers[user].collateralAmount;\r\n        address[] memory allPools = IPoolFactory(poolFactory).getPools();\r\n        for (uint256 i = 0; i < allPools.length; i++) {\r\n            if (allPools[i] != address(this)) {\r\n                try ILiquidityPool(allPools[i]).getStake(user) returns (Stake memory userStakeInPool) {\r\n                    totalCollateral += userStakeInPool.collateralAmount;\r\n                } catch {\r\n                    continue;\r\n                }\r\n            }\r\n        }\r\n        return totalCollateral;\r\n    }\r\n\r\n    function redistributeFundsFromPools(address user, uint256 requiredAmount, uint256 currentPoolAvailable) internal returns (uint256 redistributedAmount) {\r\n        uint256 stillNeeded = requiredAmount - currentPoolAvailable;\r\n        redistributedAmount = currentPoolAvailable;\r\n        address[] memory allPools = IPoolFactory(poolFactory).getPools();\r\n        for (uint256 i = 0; i < allPools.length; i++) {\r\n            if (stillNeeded == 0) break;\r\n            address poolAddress = allPools[i];\r\n            if (poolAddress == address(this)) continue;\r\n            try ILiquidityPool(poolAddress).getCollateralAvailable(user) returns (uint256 poolCollateral) {\r\n                try ILiquidityPool(poolAddress).totalLiquidity() returns (uint256 poolLiquidity) {\r\n                    uint256 canTakeFromPool = poolCollateral > stillNeeded ? stillNeeded : poolCollateral;\r\n                    if (poolLiquidity >= canTakeFromPool && canTakeFromPool > 0) {\r\n                        try ILiquidityPool(poolAddress).transferLiquidityToPool(address(this), user, canTakeFromPool) {\r\n                            redistributedAmount += canTakeFromPool;\r\n                            stillNeeded -= canTakeFromPool;\r\n                        } catch {\r\n                            continue;\r\n                        }\r\n                    }\r\n                } catch {\r\n                    continue;\r\n                }\r\n            } catch {\r\n                continue;\r\n            }\r\n        }\r\n        return redistributedAmount;\r\n    }\r\n\r\n    function addLiquidityFromNewPools(address user, uint256 requiredAmount, uint256 currentAvailable) internal returns (uint256 totalAvailable) {\r\n        uint256 stillNeeded = requiredAmount - currentAvailable;\r\n        totalAvailable = currentAvailable;\r\n        address[] memory allPools = IPoolFactory(poolFactory).getPools();\r\n        for (uint256 i = 0; i < allPools.length; i++) {\r\n            if (stillNeeded == 0) break;\r\n            address poolAddress = allPools[i];\r\n            if (poolAddress == address(this)) continue;\r\n            try ILiquidityPool(poolAddress).getStakedAmount(user) returns (uint256 userStakeInPool) {\r\n                uint256 userCollateralInPool = (userStakeInPool * COLLATERAL_PERCENTAGE_BP) / BASIS_POINTS;\r\n                uint256 availableFromPool = userCollateralInPool > stillNeeded ? stillNeeded : userCollateralInPool;\r\n                try ILiquidityPool(poolAddress).totalLiquidity() returns (uint256 poolLiquidity) {\r\n                    if (availableFromPool > 0 && poolLiquidity >= availableFromPool) {\r\n                        try ILiquidityPool(poolAddress).contributeLiquidityForPayment(address(this), user, availableFromPool) {\r\n                            totalAvailable += availableFromPool;\r\n                            stillNeeded -= availableFromPool;\r\n                        } catch {\r\n                            continue;\r\n                        }\r\n                    }\r\n                } catch {\r\n                    continue;\r\n                }\r\n            } catch {\r\n                continue;\r\n            }\r\n        }\r\n        return totalAvailable;\r\n    }\r\n\r\n    function fallbackPay(address _merchantAddress, uint256 _amount) external whenActive {\r\n        require(_amount > 0, \"Amount must be > 0\");\r\n        require(_merchantAddress != address(0), \"Invalid merchant address\");\r\n        uint256 totalCollateralAcrossPools = getTotalCollateralAcrossPools(msg.sender);\r\n        uint256 currentPoolCollateral = this.getCollateralAvailable(msg.sender);\r\n        uint256 currentPoolLiquidity = totalLiquidityStaked;\r\n        if (currentPoolCollateral >= _amount && currentPoolLiquidity >= _amount) {\r\n            executeOriginalFallbackPay(_merchantAddress, _amount);\r\n            return;\r\n        }\r\n        uint256 availableAfterRedistribution = currentPoolCollateral;\r\n        if (currentPoolLiquidity < _amount) {\r\n            availableAfterRedistribution = redistributeFundsFromPools(msg.sender, _amount, currentPoolCollateral);\r\n        }\r\n        uint256 finalAvailableAmount = availableAfterRedistribution;\r\n        if (finalAvailableAmount < _amount) {\r\n            finalAvailableAmount = addLiquidityFromNewPools(msg.sender, _amount, availableAfterRedistribution);\r\n        }\r\n        require(finalAvailableAmount >= _amount, \"Insufficient liquidity\");\r\n        require(_amount <= totalCollateralAcrossPools, \"Exceeds collateral limit\");\r\n        executeOriginalFallbackPay(_merchantAddress, _amount);\r\n    }\r\n\r\n    function executeOriginalFallbackPay(address _merchantAddress, uint256 _amount) internal {\r\n        require(totalLiquidityStaked >= _amount, \"Insufficient pool liquidity\");\r\n        uint256 lpTokensToBurn;\r\n        if (lpToken.totalSupply() == 0) {\r\n            revert(\"No LP tokens to burn\");\r\n        } else {\r\n            lpTokensToBurn = (_amount * lpToken.totalSupply()) / totalLiquidityStaked;\r\n        }\r\n        require(lpToken.balanceOf(msg.sender) >= lpTokensToBurn, \"Insufficient LP tokens\");\r\n        Stake storage userStake = stakers[msg.sender];\r\n        require(userStake.lpTokensMinted >= lpTokensToBurn, \"Insufficient minted LP tokens\");\r\n        userStake.lpTokensMinted -= lpTokensToBurn;\r\n        userStake.stakedAmount -= _amount;\r\n        userStake.collateralAmount = (userStake.stakedAmount * COLLATERAL_PERCENTAGE_BP) / BASIS_POINTS;\r\n        totalLiquidityStaked -= _amount;\r\n        lpToken.burn(msg.sender, lpTokensToBurn);\r\n        userDebts[msg.sender].push(Debt({\r\n            user: msg.sender,\r\n            merchantAddress: _merchantAddress,\r\n            amount: _amount,\r\n            timestamp: block.timestamp,\r\n            isRepaid: false\r\n        }));\r\n        totalDebt += _amount;\r\n        uint256 newTimelock = block.timestamp + UNSTAKE_TIME_LOCK_DURATION;\r\n        if (newTimelock > debtRelatedUnstakeTimelock[msg.sender]) {\r\n            debtRelatedUnstakeTimelock[msg.sender] = newTimelock;\r\n        }\r\n        require(stakingToken.transfer(_merchantAddress, _amount), \"Payment transfer failed\");\r\n        emit FallbackPaymentMade(msg.sender, _merchantAddress, _amount, address(this));\r\n    }\r\n\r\n    function repayDebt(uint256 _debtIndex, uint256 _amount) external whenActive {\r\n        require(_amount > 0, \"Amount must be > 0\");\r\n        require(_debtIndex < userDebts[msg.sender].length, \"Invalid debt index\");\r\n        Debt storage debt = userDebts[msg.sender][_debtIndex];\r\n        require(!debt.isRepaid, \"Debt already repaid\");\r\n        require(_amount <= debt.amount, \"Amount exceeds debt\");\r\n        require(stakingToken.transferFrom(msg.sender, address(this), _amount), \"Repayment transfer failed\");\r\n        if (_amount == debt.amount) {\r\n            debt.isRepaid = true;\r\n        } else {\r\n            debt.amount -= _amount;\r\n        }\r\n        totalDebt -= _amount;\r\n        if (this.getActiveDebtAmount(msg.sender) == 0) {\r\n            debtRelatedUnstakeTimelock[msg.sender] = 0;\r\n        }\r\n        emit DebtRepaid(msg.sender, _amount);\r\n    }\r\n\r\n    function distributeRewards() external onlyFactoryOwner whenActive {\r\n        require(rewardsPot > 0, \"No rewards to distribute\");\r\n        require(lpToken.totalSupply() > 0, \"No LP tokens to distribute\");\r\n        uint256 rewardsToDistribute = rewardsPot;\r\n        rewardsPot = 0;\r\n        emit RewardsDistributed(rewardsToDistribute, block.timestamp);\r\n    }\r\n\r\n    function emergencyWithdraw() external onlyFactoryOwner {\r\n        require(status == PoolStatusContract.INACTIVE, \"Pool must be inactive\");\r\n        uint256 balance = stakingToken.balanceOf(address(this));\r\n        if (balance > 0) {\r\n            stakingToken.transfer(factoryOwner, balance);\r\n        }\r\n    }\r\n\r\n   function transferLiquidityToPool(address targetPool, address user, uint256 amount) external {\r\n    require(msg.sender != address(0), \"Invalid caller\");\r\n    require(amount > 0, \"Amount must be > 0\");\r\n    require(totalLiquidityStaked >= amount, \"Insufficient liquidity\");\r\n    address[] memory allPools = IPoolFactory(poolFactory).getPools();\r\n    bool isValidPool = false;\r\n    for (uint256 i = 0; i < allPools.length; i++) {\r\n        if (allPools[i] == msg.sender || allPools[i] == targetPool) {\r\n            isValidPool = true;\r\n            break;\r\n        }\r\n    }\r\n    require(isValidPool, \"Unauthorized transfer\");\r\n    require(stakingToken.transfer(targetPool, amount), \"Transfer failed\");\r\n    totalLiquidityStaked -= amount;\r\n    // Notify target pool to increase its liquidity\r\n    ILiquidityPool(targetPool).receiveLiquidity(amount);\r\n}\r\n\r\n   function contributeLiquidityForPayment(address targetPool, address user, uint256 amount) external {\r\n    require(msg.sender != address(0), \"Invalid caller\");\r\n    require(amount > 0, \"Amount must be > 0\");\r\n    require(totalLiquidityStaked >= amount, \"Insufficient liquidity\");\r\n    Stake storage userStake = stakers[user];\r\n    uint256 userCollateral = (userStake.stakedAmount * COLLATERAL_PERCENTAGE_BP) / BASIS_POINTS;\r\n    require(userCollateral >= amount, \"Insufficient collateral\");\r\n    address[] memory allPools = IPoolFactory(poolFactory).getPools();\r\n    bool isValidPool = false;\r\n    for (uint256 i = 0; i < allPools.length; i++) {\r\n        if (allPools[i] == msg.sender || allPools[i] == targetPool) {\r\n            isValidPool = true;\r\n            break;\r\n        }\r\n    }\r\n    require(isValidPool, \"Unauthorized contribution\");\r\n    require(stakingToken.transfer(targetPool, amount), \"Contribution transfer failed\");\r\n    totalLiquidityStaked -= amount;\r\n    // Notify target pool to increase its liquidity\r\n    ILiquidityPool(targetPool).receiveLiquidity(amount);\r\n}\r\n\r\nfunction receiveLiquidity(uint256 amount) external {\r\n    require(msg.sender != address(0), \"Invalid caller\");\r\n    address[] memory allPools = IPoolFactory(poolFactory).getPools();\r\n    bool isValidPool = false;\r\n    for (uint256 i = 0; i < allPools.length; i++) {\r\n        if (allPools[i] == msg.sender) {\r\n            isValidPool = true;\r\n            break;\r\n        }\r\n    }\r\n    require(isValidPool, \"Unauthorized caller\");\r\n    totalLiquidityStaked += amount;\r\n}\r\n    function getStakedAmount(address user) external view returns (uint256) {\r\n        return stakers[user].stakedAmount;\r\n    }\r\n}",
+  "sourcePath": "C:\\Users\\nayak\\OneDrive\\Desktop\\Ageis-Blockchain\\truffle-project\\contracts\\LiquidityPool.sol",
   "ast": {
     "absolutePath": "project:/contracts/LiquidityPool.sol",
     "exportedSymbols": {
-      "IERC20": [
-        1011
-      ],
-      "ILiquidityPool": [
-        1459
-      ],
-      "IPoolFactory": [
-        1399
-      ],
-      "LPERC20": [
-        1388
-      ],
-      "LiquidityPool": [
-        3331
-      ],
-      "Stake": [
-        1408
-      ]
+      "IERC20": [1011],
+      "ILiquidityPool": [1459],
+      "IPoolFactory": [1399],
+      "LPERC20": [1388],
+      "LiquidityPool": [3331],
+      "Stake": [1408]
     },
     "id": 3332,
     "license": "MIT",
@@ -191,12 +179,7 @@
     "nodes": [
       {
         "id": 1390,
-        "literals": [
-          "solidity",
-          "^",
-          "0.8",
-          ".19"
-        ],
+        "literals": ["solidity", "^", "0.8", ".19"],
         "nodeType": "PragmaDirective",
         "src": "32:24:8"
       },
@@ -232,9 +215,7 @@
         "contractKind": "interface",
         "fullyImplemented": false,
         "id": 1399,
-        "linearizedBaseContracts": [
-          1399
-        ],
+        "linearizedBaseContracts": [1399],
         "name": "IPoolFactory",
         "nameLocation": "116:12:8",
         "nodeType": "ContractDefinition",
@@ -438,9 +419,7 @@
         "contractKind": "interface",
         "fullyImplemented": false,
         "id": 1459,
-        "linearizedBaseContracts": [
-          1459
-        ],
+        "linearizedBaseContracts": [1459],
         "name": "ILiquidityPool",
         "nameLocation": "423:14:8",
         "nodeType": "ContractDefinition",
@@ -514,9 +493,7 @@
                     "pathNode": {
                       "id": 1412,
                       "name": "Stake",
-                      "nameLocations": [
-                        "499:5:8"
-                      ],
+                      "nameLocations": ["499:5:8"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 1408,
                       "src": "499:5:8"
@@ -1049,15 +1026,11 @@
         "abstract": false,
         "baseContracts": [],
         "canonicalName": "LiquidityPool",
-        "contractDependencies": [
-          1388
-        ],
+        "contractDependencies": [1388],
         "contractKind": "contract",
         "fullyImplemented": true,
         "id": 3331,
-        "linearizedBaseContracts": [
-          3331
-        ],
+        "linearizedBaseContracts": [3331],
         "name": "LiquidityPool",
         "nameLocation": "1020:13:8",
         "nodeType": "ContractDefinition",
@@ -1170,9 +1143,7 @@
               "pathNode": {
                 "id": 1466,
                 "name": "IERC20",
-                "nameLocations": [
-                  "1155:6:8"
-                ],
+                "nameLocations": ["1155:6:8"],
                 "nodeType": "IdentifierPath",
                 "referencedDeclaration": 1011,
                 "src": "1155:6:8"
@@ -1208,9 +1179,7 @@
               "pathNode": {
                 "id": 1469,
                 "name": "LPERC20",
-                "nameLocations": [
-                  "1187:7:8"
-                ],
+                "nameLocations": ["1187:7:8"],
                 "nodeType": "IdentifierPath",
                 "referencedDeclaration": 1388,
                 "src": "1187:7:8"
@@ -1274,9 +1243,7 @@
               "pathNode": {
                 "id": 1474,
                 "name": "PoolStatusContract",
-                "nameLocations": [
-                  "1256:18:8"
-                ],
+                "nameLocations": ["1256:18:8"],
                 "nodeType": "IdentifierPath",
                 "referencedDeclaration": 1522,
                 "src": "1256:18:8"
@@ -1567,9 +1534,7 @@
                 "pathNode": {
                   "id": 1494,
                   "name": "Stake",
-                  "nameLocations": [
-                    "1593:5:8"
-                  ],
+                  "nameLocations": ["1593:5:8"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1408,
                   "src": "1593:5:8"
@@ -1629,9 +1594,7 @@
                   "pathNode": {
                     "id": 1499,
                     "name": "Debt",
-                    "nameLocations": [
-                      "1639:4:8"
-                    ],
+                    "nameLocations": ["1639:4:8"],
                     "nodeType": "IdentifierPath",
                     "referencedDeclaration": 1518,
                     "src": "1639:4:8"
@@ -2396,9 +2359,7 @@
                     "pathNode": {
                       "id": 1561,
                       "name": "PoolStatusContract",
-                      "nameLocations": [
-                        "2412:18:8"
-                      ],
+                      "nameLocations": ["2412:18:8"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 1522,
                       "src": "2412:18:8"
@@ -2603,9 +2564,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "2575:7:8",
@@ -2754,9 +2713,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "2687:7:8",
@@ -3451,9 +3408,7 @@
                           "pathNode": {
                             "id": 1632,
                             "name": "LPERC20",
-                            "nameLocations": [
-                              "3117:7:8"
-                            ],
+                            "nameLocations": ["3117:7:8"],
                             "nodeType": "IdentifierPath",
                             "referencedDeclaration": 1388,
                             "src": "3117:7:8"
@@ -3696,9 +3651,7 @@
                     "pathNode": {
                       "id": 1661,
                       "name": "PoolStatusContract",
-                      "nameLocations": [
-                        "3344:18:8"
-                      ],
+                      "nameLocations": ["3344:18:8"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 1522,
                       "src": "3344:18:8"
@@ -4115,9 +4068,7 @@
                     "pathNode": {
                       "id": 1698,
                       "name": "Stake",
-                      "nameLocations": [
-                        "3763:5:8"
-                      ],
+                      "nameLocations": ["3763:5:8"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 1408,
                       "src": "3763:5:8"
@@ -4260,9 +4211,7 @@
                       "pathNode": {
                         "id": 1711,
                         "name": "Debt",
-                        "nameLocations": [
-                          "3881:4:8"
-                        ],
+                        "nameLocations": ["3881:4:8"],
                         "nodeType": "IdentifierPath",
                         "referencedDeclaration": 1518,
                         "src": "3881:4:8"
@@ -4300,9 +4249,7 @@
               "src": "4021:357:8",
               "statements": [
                 {
-                  "assignments": [
-                    1729
-                  ],
+                  "assignments": [1729],
                   "declarations": [
                     {
                       "constant": false,
@@ -4353,9 +4300,7 @@
                   "src": "4031:21:8"
                 },
                 {
-                  "assignments": [
-                    1736
-                  ],
+                  "assignments": [1736],
                   "declarations": [
                     {
                       "constant": false,
@@ -4379,9 +4324,7 @@
                           "pathNode": {
                             "id": 1733,
                             "name": "Debt",
-                            "nameLocations": [
-                              "4062:4:8"
-                            ],
+                            "nameLocations": ["4062:4:8"],
                             "nodeType": "IdentifierPath",
                             "referencedDeclaration": 1518,
                             "src": "4062:4:8"
@@ -4676,9 +4619,7 @@
                   },
                   "id": 1767,
                   "initializationExpression": {
-                    "assignments": [
-                      1742
-                    ],
+                    "assignments": [1742],
                     "declarations": [
                       {
                         "constant": false,
@@ -5057,9 +4998,7 @@
               "src": "4460:252:8",
               "statements": [
                 {
-                  "assignments": [
-                    1792
-                  ],
+                  "assignments": [1792],
                   "declarations": [
                     {
                       "constant": false,
@@ -5110,9 +5049,7 @@
                   "src": "4470:14:8"
                 },
                 {
-                  "assignments": [
-                    1799
-                  ],
+                  "assignments": [1799],
                   "declarations": [
                     {
                       "constant": false,
@@ -5136,9 +5073,7 @@
                           "pathNode": {
                             "id": 1796,
                             "name": "Debt",
-                            "nameLocations": [
-                              "4494:4:8"
-                            ],
+                            "nameLocations": ["4494:4:8"],
                             "nodeType": "IdentifierPath",
                             "referencedDeclaration": 1518,
                             "src": "4494:4:8"
@@ -5433,9 +5368,7 @@
                   },
                   "id": 1830,
                   "initializationExpression": {
-                    "assignments": [
-                      1805
-                    ],
+                    "assignments": [1805],
                     "declarations": [
                       {
                         "constant": false,
@@ -6035,9 +5968,7 @@
                 "modifierName": {
                   "id": 1844,
                   "name": "onlyFactoryOwner",
-                  "nameLocations": [
-                    "4846:16:8"
-                  ],
+                  "nameLocations": ["4846:16:8"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1585,
                   "src": "4846:16:8"
@@ -6183,9 +6114,7 @@
                 "modifierName": {
                   "id": 1879,
                   "name": "onlyFactoryOwner",
-                  "nameLocations": [
-                    "5190:16:8"
-                  ],
+                  "nameLocations": ["5190:16:8"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1585,
                   "src": "5190:16:8"
@@ -6222,9 +6151,7 @@
                     "pathNode": {
                       "id": 1875,
                       "name": "PoolStatusContract",
-                      "nameLocations": [
-                        "5150:18:8"
-                      ],
+                      "nameLocations": ["5150:18:8"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 1522,
                       "src": "5150:18:8"
@@ -6340,9 +6267,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "5369:7:8",
@@ -6481,9 +6406,7 @@
                 "modifierName": {
                   "id": 1895,
                   "name": "onlyFactoryOwner",
-                  "nameLocations": [
-                    "5342:16:8"
-                  ],
+                  "nameLocations": ["5342:16:8"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1585,
                   "src": "5342:16:8"
@@ -6628,9 +6551,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "5603:7:8",
@@ -6769,9 +6690,7 @@
                 "modifierName": {
                   "id": 1918,
                   "name": "onlyFactoryOwner",
-                  "nameLocations": [
-                    "5576:16:8"
-                  ],
+                  "nameLocations": ["5576:16:8"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1585,
                   "src": "5576:16:8"
@@ -6916,9 +6835,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "5784:7:8",
@@ -7139,9 +7056,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "5836:7:8",
@@ -7171,9 +7086,7 @@
                   "src": "5836:95:8"
                 },
                 {
-                  "assignments": [
-                    1966
-                  ],
+                  "assignments": [1966],
                   "declarations": [
                     {
                       "constant": false,
@@ -7296,9 +7209,7 @@
                   "src": "5941:78:8"
                 },
                 {
-                  "assignments": [
-                    1975
-                  ],
+                  "assignments": [1975],
                   "declarations": [
                     {
                       "constant": false,
@@ -7630,9 +7541,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    2002
-                  ],
+                  "assignments": [2002],
                   "declarations": [
                     {
                       "constant": false,
@@ -7655,9 +7564,7 @@
                         "pathNode": {
                           "id": 2000,
                           "name": "Stake",
-                          "nameLocations": [
-                            "6255:5:8"
-                          ],
+                          "nameLocations": ["6255:5:8"],
                           "nodeType": "IdentifierPath",
                           "referencedDeclaration": 1408,
                           "src": "6255:5:8"
@@ -8237,9 +8144,7 @@
                 "modifierName": {
                   "id": 1941,
                   "name": "whenActive",
-                  "nameLocations": [
-                    "5763:10:8"
-                  ],
+                  "nameLocations": ["5763:10:8"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1597,
                   "src": "5763:10:8"
@@ -8384,9 +8289,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "6736:7:8",
@@ -8416,9 +8319,7 @@
                   "src": "6736:58:8"
                 },
                 {
-                  "assignments": [
-                    2069
-                  ],
+                  "assignments": [2069],
                   "declarations": [
                     {
                       "constant": false,
@@ -8441,9 +8342,7 @@
                         "pathNode": {
                           "id": 2067,
                           "name": "Stake",
-                          "nameLocations": [
-                            "6804:5:8"
-                          ],
+                          "nameLocations": ["6804:5:8"],
                           "nodeType": "IdentifierPath",
                           "referencedDeclaration": 1408,
                           "src": "6804:5:8"
@@ -8607,9 +8506,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "6859:7:8",
@@ -8639,9 +8536,7 @@
                   "src": "6859:77:8"
                 },
                 {
-                  "assignments": [
-                    2084
-                  ],
+                  "assignments": [2084],
                   "declarations": [
                     {
                       "constant": false,
@@ -8780,9 +8675,7 @@
                   "src": "6946:90:8"
                 },
                 {
-                  "assignments": [
-                    2094
-                  ],
+                  "assignments": [2094],
                   "declarations": [
                     {
                       "constant": false,
@@ -8921,9 +8814,7 @@
                   "src": "7046:94:8"
                 },
                 {
-                  "assignments": [
-                    2104
-                  ],
+                  "assignments": [2104],
                   "declarations": [
                     {
                       "constant": false,
@@ -9062,9 +8953,7 @@
                   "src": "7150:96:8"
                 },
                 {
-                  "assignments": [
-                    2114
-                  ],
+                  "assignments": [2114],
                   "declarations": [
                     {
                       "constant": false,
@@ -9157,9 +9046,7 @@
                   "src": "7256:77:8"
                 },
                 {
-                  "assignments": [
-                    2121
-                  ],
+                  "assignments": [2121],
                   "declarations": [
                     {
                       "constant": false,
@@ -9350,9 +9237,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "7410:7:8",
@@ -9833,9 +9718,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "7759:7:8",
@@ -9978,9 +9861,7 @@
                 "modifierName": {
                   "id": 2057,
                   "name": "whenActive",
-                  "nameLocations": [
-                    "6715:10:8"
-                  ],
+                  "nameLocations": ["6715:10:8"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1597,
                   "src": "6715:10:8"
@@ -10045,9 +9926,7 @@
               "src": "8017:558:8",
               "statements": [
                 {
-                  "assignments": [
-                    2191
-                  ],
+                  "assignments": [2191],
                   "declarations": [
                     {
                       "constant": false,
@@ -10135,9 +10014,7 @@
                   "src": "8027:56:8"
                 },
                 {
-                  "assignments": [
-                    2201
-                  ],
+                  "assignments": [2201],
                   "declarations": [
                     {
                       "constant": false,
@@ -10488,9 +10365,7 @@
                                           "pathNode": {
                                             "id": 2235,
                                             "name": "Stake",
-                                            "nameLocations": [
-                                              "8335:5:8"
-                                            ],
+                                            "nameLocations": ["8335:5:8"],
                                             "nodeType": "IdentifierPath",
                                             "referencedDeclaration": 1408,
                                             "src": "8335:5:8"
@@ -10723,9 +10598,7 @@
                   },
                   "id": 2253,
                   "initializationExpression": {
-                    "assignments": [
-                      2209
-                    ],
+                    "assignments": [2209],
                     "declarations": [
                       {
                         "constant": false,
@@ -10921,9 +10794,7 @@
               "src": "8732:1349:8",
               "statements": [
                 {
-                  "assignments": [
-                    2269
-                  ],
+                  "assignments": [2269],
                   "declarations": [
                     {
                       "constant": false,
@@ -11043,9 +10914,7 @@
                   "src": "8811:42:8"
                 },
                 {
-                  "assignments": [
-                    2282
-                  ],
+                  "assignments": [2282],
                   "declarations": [
                     {
                       "constant": false,
@@ -11235,9 +11104,7 @@
                         }
                       },
                       {
-                        "assignments": [
-                          2306
-                        ],
+                        "assignments": [2306],
                         "declarations": [
                           {
                             "constant": false,
@@ -11423,9 +11290,7 @@
                                         "src": "9334:577:8",
                                         "statements": [
                                           {
-                                            "assignments": [
-                                              2337
-                                            ],
+                                            "assignments": [2337],
                                             "declarations": [
                                               {
                                                 "constant": false,
@@ -12334,9 +12199,7 @@
                   },
                   "id": 2392,
                   "initializationExpression": {
-                    "assignments": [
-                      2290
-                    ],
+                    "assignments": [2290],
                     "declarations": [
                       {
                         "constant": false,
@@ -12585,9 +12448,7 @@
               "src": "10227:1454:8",
               "statements": [
                 {
-                  "assignments": [
-                    2408
-                  ],
+                  "assignments": [2408],
                   "declarations": [
                     {
                       "constant": false,
@@ -12707,9 +12568,7 @@
                   "src": "10302:33:8"
                 },
                 {
-                  "assignments": [
-                    2421
-                  ],
+                  "assignments": [2421],
                   "declarations": [
                     {
                       "constant": false,
@@ -12899,9 +12758,7 @@
                         }
                       },
                       {
-                        "assignments": [
-                          2445
-                        ],
+                        "assignments": [2445],
                         "declarations": [
                           {
                             "constant": false,
@@ -13079,9 +12936,7 @@
                               "src": "10711:875:8",
                               "statements": [
                                 {
-                                  "assignments": [
-                                    2468
-                                  ],
+                                  "assignments": [2468],
                                   "declarations": [
                                     {
                                       "constant": false,
@@ -13204,9 +13059,7 @@
                                   "src": "10729:90:8"
                                 },
                                 {
-                                  "assignments": [
-                                    2477
-                                  ],
+                                  "assignments": [2477],
                                   "declarations": [
                                     {
                                       "constant": false,
@@ -14123,9 +13976,7 @@
                   },
                   "id": 2540,
                   "initializationExpression": {
-                    "assignments": [
-                      2429
-                    ],
+                    "assignments": [2429],
                     "declarations": [
                       {
                         "constant": false,
@@ -14454,9 +14305,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "11781:7:8",
@@ -14611,9 +14460,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "11833:7:8",
@@ -14643,9 +14490,7 @@
                   "src": "11833:67:8"
                 },
                 {
-                  "assignments": [
-                    2571
-                  ],
+                  "assignments": [2571],
                   "declarations": [
                     {
                       "constant": false,
@@ -14744,9 +14589,7 @@
                   "src": "11910:78:8"
                 },
                 {
-                  "assignments": [
-                    2578
-                  ],
+                  "assignments": [2578],
                   "declarations": [
                     {
                       "constant": false,
@@ -14861,9 +14704,7 @@
                   "src": "11998:71:8"
                 },
                 {
-                  "assignments": [
-                    2586
-                  ],
+                  "assignments": [2586],
                   "declarations": [
                     {
                       "constant": false,
@@ -15100,9 +14941,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    2605
-                  ],
+                  "assignments": [2605],
                   "declarations": [
                     {
                       "constant": false,
@@ -15330,9 +15169,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    2623
-                  ],
+                  "assignments": [2623],
                   "declarations": [
                     {
                       "constant": false,
@@ -15636,9 +15473,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "12798:7:8",
@@ -15744,9 +15579,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "12874:7:8",
@@ -15858,9 +15691,7 @@
                 "modifierName": {
                   "id": 2550,
                   "name": "whenActive",
-                  "nameLocations": [
-                    "11760:10:8"
-                  ],
+                  "nameLocations": ["11760:10:8"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1597,
                   "src": "11760:10:8"
@@ -16029,9 +15860,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "13122:7:8",
@@ -16061,9 +15890,7 @@
                   "src": "13122:71:8"
                 },
                 {
-                  "assignments": [
-                    2675
-                  ],
+                  "assignments": [2675],
                   "declarations": [
                     {
                       "constant": false,
@@ -16378,10 +16205,7 @@
                             "id": 2682,
                             "name": "revert",
                             "nodeType": "Identifier",
-                            "overloadedDeclarations": [
-                              4294967277,
-                              4294967277
-                            ],
+                            "overloadedDeclarations": [4294967277, 4294967277],
                             "referencedDeclaration": 4294967277,
                             "src": "13281:6:8",
                             "typeDescriptions": {
@@ -16557,9 +16381,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "13435:7:8",
@@ -16589,9 +16411,7 @@
                   "src": "13435:82:8"
                 },
                 {
-                  "assignments": [
-                    2713
-                  ],
+                  "assignments": [2713],
                   "declarations": [
                     {
                       "constant": false,
@@ -16614,9 +16434,7 @@
                         "pathNode": {
                           "id": 2711,
                           "name": "Stake",
-                          "nameLocations": [
-                            "13527:5:8"
-                          ],
+                          "nameLocations": ["13527:5:8"],
                           "nodeType": "IdentifierPath",
                           "referencedDeclaration": 1408,
                           "src": "13527:5:8"
@@ -16780,9 +16598,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "13582:7:8",
@@ -17524,9 +17340,7 @@
                   "src": "14196:20:8"
                 },
                 {
-                  "assignments": [
-                    2784
-                  ],
+                  "assignments": [2784],
                   "declarations": [
                     {
                       "constant": false,
@@ -17910,9 +17724,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "14446:7:8",
@@ -18273,9 +18085,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "14717:7:8",
@@ -18436,9 +18246,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "14769:7:8",
@@ -18468,9 +18276,7 @@
                   "src": "14769:72:8"
                 },
                 {
-                  "assignments": [
-                    2855
-                  ],
+                  "assignments": [2855],
                   "declarations": [
                     {
                       "constant": false,
@@ -18493,9 +18299,7 @@
                         "pathNode": {
                           "id": 2853,
                           "name": "Debt",
-                          "nameLocations": [
-                            "14851:4:8"
-                          ],
+                          "nameLocations": ["14851:4:8"],
                           "nodeType": "IdentifierPath",
                           "referencedDeclaration": 1518,
                           "src": "14851:4:8"
@@ -18669,9 +18473,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "14914:7:8",
@@ -18793,9 +18595,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "14970:7:8",
@@ -19016,9 +18816,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "15034:7:8",
@@ -19600,9 +19398,7 @@
                 "modifierName": {
                   "id": 2832,
                   "name": "whenActive",
-                  "nameLocations": [
-                    "14696:10:8"
-                  ],
+                  "nameLocations": ["14696:10:8"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1597,
                   "src": "14696:10:8"
@@ -19774,9 +19570,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "15556:7:8",
@@ -19921,9 +19715,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "15617:7:8",
@@ -19953,9 +19745,7 @@
                   "src": "15617:64:8"
                 },
                 {
-                  "assignments": [
-                    2962
-                  ],
+                  "assignments": [2962],
                   "declarations": [
                     {
                       "constant": false,
@@ -20146,9 +19936,7 @@
                 "modifierName": {
                   "id": 2940,
                   "name": "onlyFactoryOwner",
-                  "nameLocations": [
-                    "15518:16:8"
-                  ],
+                  "nameLocations": ["15518:16:8"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1585,
                   "src": "15518:16:8"
@@ -20162,9 +19950,7 @@
                 "modifierName": {
                   "id": 2942,
                   "name": "whenActive",
-                  "nameLocations": [
-                    "15535:10:8"
-                  ],
+                  "nameLocations": ["15535:10:8"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1597,
                   "src": "15535:10:8"
@@ -20293,9 +20079,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "15904:7:8",
@@ -20325,9 +20109,7 @@
                   "src": "15904:71:8"
                 },
                 {
-                  "assignments": [
-                    2990
-                  ],
+                  "assignments": [2990],
                   "declarations": [
                     {
                       "constant": false,
@@ -20628,9 +20410,7 @@
                 "modifierName": {
                   "id": 2978,
                   "name": "onlyFactoryOwner",
-                  "nameLocations": [
-                    "15877:16:8"
-                  ],
+                  "nameLocations": ["15877:16:8"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 1585,
                   "src": "15877:16:8"
@@ -20807,9 +20587,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "16245:7:8",
@@ -20919,9 +20697,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "16302:7:8",
@@ -21027,9 +20803,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "16349:7:8",
@@ -21059,9 +20833,7 @@
                   "src": "16349:65:8"
                 },
                 {
-                  "assignments": [
-                    3050
-                  ],
+                  "assignments": [3050],
                   "declarations": [
                     {
                       "constant": false,
@@ -21189,9 +20961,7 @@
                   "src": "16420:64:8"
                 },
                 {
-                  "assignments": [
-                    3058
-                  ],
+                  "assignments": [3058],
                   "declarations": [
                     {
                       "constant": false,
@@ -21539,9 +21309,7 @@
                   },
                   "id": 3092,
                   "initializationExpression": {
-                    "assignments": [
-                      3062
-                    ],
+                    "assignments": [3062],
                     "declarations": [
                       {
                         "constant": false,
@@ -21674,9 +21442,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "16709:7:8",
@@ -21821,9 +21587,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "16760:7:8",
@@ -22261,9 +22025,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "17086:7:8",
@@ -22373,9 +22135,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "17143:7:8",
@@ -22481,9 +22241,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "17190:7:8",
@@ -22513,9 +22271,7 @@
                   "src": "17190:65:8"
                 },
                 {
-                  "assignments": [
-                    3155
-                  ],
+                  "assignments": [3155],
                   "declarations": [
                     {
                       "constant": false,
@@ -22538,9 +22294,7 @@
                         "pathNode": {
                           "id": 3153,
                           "name": "Stake",
-                          "nameLocations": [
-                            "17261:5:8"
-                          ],
+                          "nameLocations": ["17261:5:8"],
                           "nodeType": "IdentifierPath",
                           "referencedDeclaration": 1408,
                           "src": "17261:5:8"
@@ -22597,9 +22351,7 @@
                   "src": "17261:39:8"
                 },
                 {
-                  "assignments": [
-                    3161
-                  ],
+                  "assignments": [3161],
                   "declarations": [
                     {
                       "constant": false,
@@ -22814,9 +22566,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "17403:7:8",
@@ -22846,9 +22596,7 @@
                   "src": "17403:60:8"
                 },
                 {
-                  "assignments": [
-                    3181
-                  ],
+                  "assignments": [3181],
                   "declarations": [
                     {
                       "constant": false,
@@ -22976,9 +22724,7 @@
                   "src": "17469:64:8"
                 },
                 {
-                  "assignments": [
-                    3189
-                  ],
+                  "assignments": [3189],
                   "declarations": [
                     {
                       "constant": false,
@@ -23326,9 +23072,7 @@
                   },
                   "id": 3223,
                   "initializationExpression": {
-                    "assignments": [
-                      3193
-                    ],
+                    "assignments": [3193],
                     "declarations": [
                       {
                         "constant": false,
@@ -23461,9 +23205,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "17758:7:8",
@@ -23608,9 +23350,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "17813:7:8",
@@ -24048,9 +23788,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "18102:7:8",
@@ -24080,9 +23818,7 @@
                   "src": "18102:51:8"
                 },
                 {
-                  "assignments": [
-                    3270
-                  ],
+                  "assignments": [3270],
                   "declarations": [
                     {
                       "constant": false,
@@ -24210,9 +23946,7 @@
                   "src": "18159:64:8"
                 },
                 {
-                  "assignments": [
-                    3278
-                  ],
+                  "assignments": [3278],
                   "declarations": [
                     {
                       "constant": false,
@@ -24475,9 +24209,7 @@
                   },
                   "id": 3306,
                   "initializationExpression": {
-                    "assignments": [
-                      3282
-                    ],
+                    "assignments": [3282],
                     "declarations": [
                       {
                         "constant": false,
@@ -24610,9 +24342,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "18419:7:8",
@@ -24894,16 +24624,7 @@
         "scope": 3332,
         "src": "1011:17618:8",
         "usedErrors": [],
-        "usedEvents": [
-          1530,
-          1538,
-          1548,
-          1554,
-          1560,
-          1565,
-          1569,
-          1573
-        ]
+        "usedEvents": [1530, 1538, 1548, 1554, 1560, 1565, 1569, 1573]
       }
     ],
     "src": "32:18597:8"
@@ -24914,7 +24635,7 @@
   },
   "networks": {},
   "schemaVersion": "3.4.16",
-  "updatedAt": "2025-06-21T17:17:42.915Z",
+  "updatedAt": "2025-06-22T05:46:46.861Z",
   "devdoc": {
     "kind": "dev",
     "methods": {},

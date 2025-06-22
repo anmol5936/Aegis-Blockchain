@@ -283,34 +283,20 @@
   "immutableReferences": {},
   "generatedSources": [],
   "deployedGeneratedSources": [],
-  "sourceMap": "195:3961:9:-:0;;;;;;;;;;;;;-1:-1:-1;;195:3961:9;;;;-1:-1:-1;;;;;195:3961:9;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;;;;195:3961:9;;;;;;;;-1:-1:-1;195:3961:9;;-1:-1:-1;;;;;;195:3961:9;;;908:10;195:3961;;;;928:42;195:3961;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;195:3961:9;;;;;;-1:-1:-1;195:3961:9;;;;;-1:-1:-1;195:3961:9",
-  "deployedSourceMap": "195:3961:9:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;195:3961:9;;;;;;:::i;:::-;;;;752:68;760:10;-1:-1:-1;;;;;195:3961:9;;760:19;752:68;:::i;:::-;-1:-1:-1;;;;;195:3961:9;;3017:22;;195:3961;;-1:-1:-1;;;;;;195:3961:9;;;;;;;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;;;;;;;;-1:-1:-1;;195:3961:9;;;;;;;:::i;:::-;752:68;195:3961;;;;;;;;760:10;:19;752:68;:::i;:::-;-1:-1:-1;;;;;195:3961:9;3285:71;3293:25;;;3285:71;:::i;:::-;195:3961;;;;;;3366:83;195:3961;;;;;;:::i;:::-;3374:43;;3366:83;:::i;:::-;3468:41;;;;;195:3961;;;;;;;;;;;;;3468:41;;;;;;;;;;195:3961;;3468:41;;;;;:::i;:::-;195:3961;;3468:41;195:3961;3468:41;195:3961;;;;;;;;;3468:41;195:3961;;;;;;;;;;:::i;:::-;;;-1:-1:-1;;;;;195:3961:9;;;752:68;760:10;:19;;752:68;:::i;:::-;195:3961;;1194:29;195:3961;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;1283:12;195:3961;;;;;;;;;;1361:19;195:3961;-1:-1:-1;;;;;195:3961:9;;1361:33;;195:3961;;;;1509:73;;;;;;;;;;;;;;;;;;;;;;;;195:3961;;;;;;;;;:::i;:::-;;;;;;;;;;;1576:4;195:3961;;;1509:73;;;;;;;;195:3961;;;;;;1662:5;195:3961;;;;;;;;1662:5;195:3961;;;1662:5;195:3961;;:::i;:::-;;;;1283:12;195:3961;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;1283:12;195:3961;;;;;;1662:5;195:3961;;;;;;;;;;;;;;;;;;;;;1509:73;195:3961;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1662:5;195:3961;;;;;1283:12;195:3961;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;1774:12;195:3961;;;;;;;;;;;;;;;;1829:49;195:3961;;;;;760:10;195:3961;760:10;195:3961;;;;;;:::i;:::-;1829:49;;;195:3961;;;;;;;;;;;;;;;;;;-1:-1:-1;;195:3961:9;;;;;;;;;;;1662:5;195:3961;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1283:12;195:3961;;;;;;;;;;;;;;;;;;;;;;;1662:5;195:3961;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1662:5;195:3961;;;;;;-1:-1:-1;195:3961:9;;;;;-1:-1:-1;;;195:3961:9;;;;;;;;;-1:-1:-1;;;195:3961:9;;;;;;;;1509:73;-1:-1:-1;;;195:3961:9;;;;;;;;;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;;;;;-1:-1:-1;;195:3961:9;;;;;;;;;248:22;;;;;195:3961;248:22;;;:::i;:::-;195:3961;;;;;;;;;;-1:-1:-1;;;;;195:3961:9;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;:::i;:::-;460:46;195:3961;;;;;;;;;;;;;;;;-1:-1:-1;;;;;195:3961:9;;;;;;;;;;;;;;;;;;;;2188:5;195:3961;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;;;;195:3961:9;;;;;;;;;;;;;;;;;;;;;;;;;2028:5;195:3961;;;;;;;;2028:5;195:3961;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;;;;195:3961:9;;;;;-1:-1:-1;195:3961:9;;;;;;;;;2028:5;195:3961;;;;;;-1:-1:-1;;;;;195:3961:9;;;;;;;;2028:5;195:3961;;;;;;;;;;;;;;-1:-1:-1;;195:3961:9;;;;-1:-1:-1;;;;;195:3961:9;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;-1:-1:-1;195:3961:9;;;;;;;-1:-1:-1;195:3961:9;;-1:-1:-1;195:3961:9;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;276:34;195:3961;;;-1:-1:-1;;;;;195:3961:9;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;:::i;:::-;;;2390:12;195:3961;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;;;;;-1:-1:-1;;195:3961:9;;;;;;:::i;:::-;;;;752:68;195:3961;;;;;;;;760:10;:19;752:68;:::i;:::-;-1:-1:-1;;;;;195:3961:9;3690:71;3698:25;;;3690:71;:::i;:::-;195:3961;;;;;;3771:83;195:3961;;;;;;:::i;3771:83::-;3872:10;;195:3961;;;;;;;;;;;4021:19;195:3961;;4014:73;195:3961;;;;;;;;;4014:73;;760:10;195:3961;4014:73;;195:3961;;;;;;;;;;;4014:73;;;;;;;;195:3961;4097:50;;;;;;195:3961;;;;;;;;;;;;;;;4097:50;;195:3961;4097:50;;195:3961;4097:50;;;;;;;;195:3961;;4097:50;;;;:::i;:::-;;;195:3961;;4097:50;195:3961;;;;;;;;;;;4097:50;195:3961;;;4014:73;195:3961;4014:73;;195:3961;4014:73;;;;;;195:3961;4014:73;;;:::i;:::-;;;195:3961;;;;;;;;;;4014:73;195:3961;;;;;;4014:73;;;-1:-1:-1;4014:73:9;;;195:3961;;;;;;;;;;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;;;;;-1:-1:-1;;195:3961:9;;;;;;:::i;:::-;752:68;195:3961;;;;;;;;760:10;:19;752:68;:::i;:::-;-1:-1:-1;;;;;195:3961:9;2674:34;;195:3961;;2757:42;195:3961;;-1:-1:-1;;;;;;195:3961:9;;;;;2814:41;;;;195:3961;;;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;:::i;:::-;;;359:43;195:3961;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::o;:::-;;;;-1:-1:-1;195:3961:9;;;;;-1:-1:-1;195:3961:9;;;-1:-1:-1;;195:3961:9;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;195:3961:9;;;;;:::i;:::-;;;;;;;;;;;;;-1:-1:-1;195:3961:9;;;;;;;;;;;;;;:::o;:::-;-1:-1:-1;195:3961:9;;;;;;;;;;-1:-1:-1;;195:3961:9;;;;:::o;:::-;;;;;;;;;;;;;;;;;-1:-1:-1;;;;;195:3961:9;;;;;;:::o;:::-;;;;;;;;;;;;;;;;;;;:::o;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;-1:-1:-1;;195:3961:9;;;;:::o;:::-;248:22;195:3961;;;;;;248:22;-1:-1:-1;195:3961:9;;-1:-1:-1;195:3961:9;;;-1:-1:-1;195:3961:9;:::o;:::-;;;;;;;;;;;;;;;;:::o;:::-;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;;:::o;:::-;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;;:::o;:::-;;;-1:-1:-1;;;195:3961:9;;;;;;;;;;;;;;;;;;;",
-  "source": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.19;\n\nimport \"./LiquidityPool.sol\";\n\n/**\n * @title PoolFactory\n * @dev Factory contract for creating and managing regional liquidity pools\n */\ncontract PoolFactory {\n    address public owner;\n    address[] public pools;\n    address public stakingTokenAddress; // Global staking token for all pools\n    \n    mapping(string => bool) public regionExists;\n    mapping(address => string) public poolToRegion;\n    mapping(string => address) public regionToPool;\n    \n    event PoolCreated(\n        address indexed poolAddress, \n        string regionName, \n        address indexed createdBy\n    );\n    \n    event StakingTokenUpdated(address indexed newStakingToken);\n    \n    modifier onlyOwner() {\n        require(msg.sender == owner, \"PoolFactory: caller is not the owner\");\n        _;\n    }\n    \n    constructor(address _stakingTokenAddress) {\n        owner = msg.sender;\n        stakingTokenAddress = _stakingTokenAddress;\n    }\n    \n    /**\n     * @dev Creates a new liquidity pool for a region\n     * @param _regionName Name of the region for the pool\n     */\n   function createPool(string memory _regionName) external onlyOwner {\n    require(bytes(_regionName).length > 0, \"PoolFactory: region name cannot be empty\");\n    require(!regionExists[_regionName], \"PoolFactory: region already exists\");\n    require(stakingTokenAddress != address(0), \"PoolFactory: staking token not set\");\n    \n    // Deploy new LiquidityPool contract\n    LiquidityPool newPool = new LiquidityPool(_regionName, owner, stakingTokenAddress, address(this));\n    \n    address poolAddress = address(newPool);\n    \n    // Update state\n    pools.push(poolAddress);\n    regionExists[_regionName] = true;\n    poolToRegion[poolAddress] = _regionName;\n    regionToPool[_regionName] = poolAddress;\n    \n    emit PoolCreated(poolAddress, _regionName, msg.sender);\n}\n    /**\n     * @dev Returns all deployed pool addresses\n     */\n    function getPools() external view returns (address[] memory) {\n        return pools;\n    }\n    \n    /**\n     * @dev Returns the number of deployed pools\n     */\n    function getPoolCount() external view returns (uint256) {\n        return pools.length;\n    }\n    \n    /**\n     * @dev Returns pool address for a specific region\n     */\n    function getPoolByRegion(string memory _regionName) external view returns (address) {\n        require(regionExists[_regionName], \"PoolFactory: region does not exist\");\n        return regionToPool[_regionName];\n    }\n    \n    /**\n     * @dev Updates the global staking token address\n     */\n    function setStakingToken(address _stakingTokenAddress) external onlyOwner {\n        require(_stakingTokenAddress != address(0), \"PoolFactory: invalid token address\");\n        stakingTokenAddress = _stakingTokenAddress;\n        emit StakingTokenUpdated(_stakingTokenAddress);\n    }\n    \n    /**\n     * @dev Transfers ownership of the factory\n     */\n    function transferOwnership(address newOwner) external onlyOwner {\n        require(newOwner != address(0), \"PoolFactory: new owner is the zero address\");\n        owner = newOwner;\n    }\n    \n    /**\n     * @dev Emergency function to pause/unpause a specific pool\n     */\n    function togglePoolStatus(address poolAddress) external onlyOwner {\n        require(poolAddress != address(0), \"PoolFactory: invalid pool address\");\n        require(bytes(poolToRegion[poolAddress]).length > 0, \"PoolFactory: pool not found\");\n        \n        LiquidityPool(poolAddress).toggleStatus();\n    }\n    \n    /**\n     * @dev Add rewards to a specific pool's reward pot\n     */\n    function addRewardsToPool(address poolAddress, uint256 amount) external onlyOwner {\n        require(poolAddress != address(0), \"PoolFactory: invalid pool address\");\n        require(bytes(poolToRegion[poolAddress]).length > 0, \"PoolFactory: pool not found\");\n        require(amount > 0, \"PoolFactory: amount must be greater than 0\");\n        \n        // Transfer staking tokens from factory owner to the pool\n        IERC20(stakingTokenAddress).transferFrom(msg.sender, poolAddress, amount);\n        LiquidityPool(poolAddress).addRewardsToPot(amount);\n    }\n}",
-  "sourcePath": "/Users/sohamsamal/Desktop/Coding/Hackathon Projects/Hackon/Ageis-Blockchain/truffle-project/contracts/PoolFactory.sol",
+  "sourceMap": "204:4071:9:-:0;;;;;;;;;;;;;-1:-1:-1;;204:4071:9;;;;-1:-1:-1;;;;;204:4071:9;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;;;;204:4071:9;;;;;;;;-1:-1:-1;204:4071:9;;-1:-1:-1;;;;;;204:4071:9;;;940:10;204:4071;;;;961:42;204:4071;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;204:4071:9;;;;;;-1:-1:-1;204:4071:9;;;;;-1:-1:-1;204:4071:9",
+  "deployedSourceMap": "204:4071:9:-:0;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;204:4071:9;;;;;;:::i;:::-;;;;779:68;787:10;-1:-1:-1;;;;;204:4071:9;;787:19;779:68;:::i;:::-;-1:-1:-1;;;;;204:4071:9;;3110:22;;204:4071;;-1:-1:-1;;;;;;204:4071:9;;;;;;;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;;;;;;;;-1:-1:-1;;204:4071:9;;;;;;;:::i;:::-;779:68;204:4071;;;;;;;;787:10;:19;779:68;:::i;:::-;-1:-1:-1;;;;;204:4071:9;3386:71;3394:25;;;3386:71;:::i;:::-;204:4071;;;;;;3468:83;204:4071;;;;;;:::i;:::-;3476:43;;3468:83;:::i;:::-;3572:41;;;;;204:4071;;;;;;;;;;;;;3572:41;;;;;;;;;;204:4071;;3572:41;;;;;:::i;:::-;204:4071;;3572:41;204:4071;3572:41;204:4071;;;;;;;;;3572:41;204:4071;;;;;;;;;;:::i;:::-;;;-1:-1:-1;;;;;204:4071:9;;;779:68;787:10;:19;;779:68;:::i;:::-;204:4071;;1235:29;204:4071;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;1325:12;204:4071;;;;;;;;;;1404:19;204:4071;-1:-1:-1;;;;;204:4071:9;;1404:33;;204:4071;;;;1555:73;;;;;;;;;;;;;;;;;;;;;;;;204:4071;;;;;;;;;:::i;:::-;;;;;;;;;;;1622:4;204:4071;;;1555:73;;;;;;;;204:4071;;;;;;1713:5;204:4071;;;;;;;;1713:5;204:4071;;;1713:5;204:4071;;:::i;:::-;;;;1325:12;204:4071;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;1325:12;204:4071;;;;;;1713:5;204:4071;;;;;;;;;;;;;;;;;;;;;1555:73;204:4071;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1713:5;204:4071;;;;;1325:12;204:4071;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;1828:12;204:4071;;;;;;;;;;;;;;;;1885:49;204:4071;;;;;787:10;204:4071;787:10;204:4071;;;;;;:::i;:::-;1885:49;;;204:4071;;;;;;;;;;;;;;;;;;-1:-1:-1;;204:4071:9;;;;;;;;;;;1713:5;204:4071;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1325:12;204:4071;;;;;;;;;;;;;;;;;;;;;;;1713:5;204:4071;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;1713:5;204:4071;;;;;;-1:-1:-1;204:4071:9;;;;;-1:-1:-1;;;204:4071:9;;;;;;;;;-1:-1:-1;;;204:4071:9;;;;;;;;1555:73;-1:-1:-1;;;204:4071:9;;;;;;;;;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;;;;;-1:-1:-1;;204:4071:9;;;;;;;;;259:22;;;;;204:4071;259:22;;;:::i;:::-;204:4071;;;;;;;;;;-1:-1:-1;;;;;204:4071:9;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;:::i;:::-;476:46;204:4071;;;;;;;;;;;;;;;;-1:-1:-1;;;;;204:4071:9;;;;;;;;;;;;;;;;;;;;2257:5;204:4071;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;;;;204:4071:9;;;;;;;;;;;;;;;;;;;;;;;;;2090:5;204:4071;;;;;;;;2090:5;204:4071;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;;;;204:4071:9;;;;;-1:-1:-1;204:4071:9;;;;;;;;;2090:5;204:4071;;;;;;-1:-1:-1;;;;;204:4071:9;;;;;;;;2090:5;204:4071;;;;;;;;;;;;;;-1:-1:-1;;204:4071:9;;;;-1:-1:-1;;;;;204:4071:9;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;-1:-1:-1;204:4071:9;;;;;;;-1:-1:-1;204:4071:9;;-1:-1:-1;204:4071:9;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;288:34;204:4071;;;-1:-1:-1;;;;;204:4071:9;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;;;;:::i;:::-;;;2466:12;204:4071;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;;;;;-1:-1:-1;;204:4071:9;;;;;;:::i;:::-;;;;779:68;204:4071;;;;;;;;787:10;:19;779:68;:::i;:::-;-1:-1:-1;;;;;204:4071:9;3801:71;3809:25;;;3801:71;:::i;:::-;204:4071;;;;;;3883:83;204:4071;;;;;;:::i;3883:83::-;3985:10;;204:4071;;;;;;;;;;;4137:19;204:4071;;4130:73;204:4071;;;;;;;;;4130:73;;787:10;204:4071;4130:73;;204:4071;;;;;;;;;;;4130:73;;;;;;;;204:4071;4214:50;;;;;;204:4071;;;;;;;;;;;;;;;4214:50;;204:4071;4214:50;;204:4071;4214:50;;;;;;;;204:4071;;4214:50;;;;:::i;:::-;;;204:4071;;4214:50;204:4071;;;;;;;;;;;4214:50;204:4071;;;4130:73;204:4071;4130:73;;204:4071;4130:73;;;;;;204:4071;4130:73;;;:::i;:::-;;;204:4071;;;;;;;;;;4130:73;204:4071;;;;;;4130:73;;;-1:-1:-1;4130:73:9;;;204:4071;;;;;;;;;;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;;;;;-1:-1:-1;;204:4071:9;;;;;;:::i;:::-;779:68;204:4071;;;;;;;;787:10;:19;779:68;:::i;:::-;-1:-1:-1;;;;;204:4071:9;2758:34;;204:4071;;2842:42;204:4071;;-1:-1:-1;;;;;;204:4071:9;;;;;2900:41;;;;204:4071;;;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;;;;;;;;;;:::i;:::-;;;;;;;;;;;;;;;:::i;:::-;;;373:43;204:4071;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::o;:::-;;;;-1:-1:-1;204:4071:9;;;;;-1:-1:-1;204:4071:9;;;-1:-1:-1;;204:4071:9;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;-1:-1:-1;;204:4071:9;;;;;:::i;:::-;;;;;;;;;;;;;-1:-1:-1;204:4071:9;;;;;;;;;;;;;;:::o;:::-;-1:-1:-1;204:4071:9;;;;;;;;;;-1:-1:-1;;204:4071:9;;;;:::o;:::-;;;;;;;;;;;;;;;;;-1:-1:-1;;;;;204:4071:9;;;;;;:::o;:::-;;;;;;;;;;;;;;;;;;;:::o;:::-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;:::i;:::-;;;-1:-1:-1;;204:4071:9;;;;:::o;:::-;259:22;204:4071;;;;;;259:22;-1:-1:-1;204:4071:9;;-1:-1:-1;204:4071:9;;;-1:-1:-1;204:4071:9;:::o;:::-;;;;;;;;;;;;;;;;:::o;:::-;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;;:::o;:::-;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;;;;;;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;;:::o;:::-;;;-1:-1:-1;;;204:4071:9;;;;;;;;;;;;;;;;;;;",
+  "source": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.19;\r\n\r\nimport \"./LiquidityPool.sol\";\r\n\r\n/**\r\n * @title PoolFactory\r\n * @dev Factory contract for creating and managing regional liquidity pools\r\n */\r\ncontract PoolFactory {\r\n    address public owner;\r\n    address[] public pools;\r\n    address public stakingTokenAddress; // Global staking token for all pools\r\n    \r\n    mapping(string => bool) public regionExists;\r\n    mapping(address => string) public poolToRegion;\r\n    mapping(string => address) public regionToPool;\r\n    \r\n    event PoolCreated(\r\n        address indexed poolAddress, \r\n        string regionName, \r\n        address indexed createdBy\r\n    );\r\n    \r\n    event StakingTokenUpdated(address indexed newStakingToken);\r\n    \r\n    modifier onlyOwner() {\r\n        require(msg.sender == owner, \"PoolFactory: caller is not the owner\");\r\n        _;\r\n    }\r\n    \r\n    constructor(address _stakingTokenAddress) {\r\n        owner = msg.sender;\r\n        stakingTokenAddress = _stakingTokenAddress;\r\n    }\r\n    \r\n    /**\r\n     * @dev Creates a new liquidity pool for a region\r\n     * @param _regionName Name of the region for the pool\r\n     */\r\n   function createPool(string memory _regionName) external onlyOwner {\r\n    require(bytes(_regionName).length > 0, \"PoolFactory: region name cannot be empty\");\r\n    require(!regionExists[_regionName], \"PoolFactory: region already exists\");\r\n    require(stakingTokenAddress != address(0), \"PoolFactory: staking token not set\");\r\n    \r\n    // Deploy new LiquidityPool contract\r\n    LiquidityPool newPool = new LiquidityPool(_regionName, owner, stakingTokenAddress, address(this));\r\n    \r\n    address poolAddress = address(newPool);\r\n    \r\n    // Update state\r\n    pools.push(poolAddress);\r\n    regionExists[_regionName] = true;\r\n    poolToRegion[poolAddress] = _regionName;\r\n    regionToPool[_regionName] = poolAddress;\r\n    \r\n    emit PoolCreated(poolAddress, _regionName, msg.sender);\r\n}\r\n    /**\r\n     * @dev Returns all deployed pool addresses\r\n     */\r\n    function getPools() external view returns (address[] memory) {\r\n        return pools;\r\n    }\r\n    \r\n    /**\r\n     * @dev Returns the number of deployed pools\r\n     */\r\n    function getPoolCount() external view returns (uint256) {\r\n        return pools.length;\r\n    }\r\n    \r\n    /**\r\n     * @dev Returns pool address for a specific region\r\n     */\r\n    function getPoolByRegion(string memory _regionName) external view returns (address) {\r\n        require(regionExists[_regionName], \"PoolFactory: region does not exist\");\r\n        return regionToPool[_regionName];\r\n    }\r\n    \r\n    /**\r\n     * @dev Updates the global staking token address\r\n     */\r\n    function setStakingToken(address _stakingTokenAddress) external onlyOwner {\r\n        require(_stakingTokenAddress != address(0), \"PoolFactory: invalid token address\");\r\n        stakingTokenAddress = _stakingTokenAddress;\r\n        emit StakingTokenUpdated(_stakingTokenAddress);\r\n    }\r\n    \r\n    /**\r\n     * @dev Transfers ownership of the factory\r\n     */\r\n    function transferOwnership(address newOwner) external onlyOwner {\r\n        require(newOwner != address(0), \"PoolFactory: new owner is the zero address\");\r\n        owner = newOwner;\r\n    }\r\n    \r\n    /**\r\n     * @dev Emergency function to pause/unpause a specific pool\r\n     */\r\n    function togglePoolStatus(address poolAddress) external onlyOwner {\r\n        require(poolAddress != address(0), \"PoolFactory: invalid pool address\");\r\n        require(bytes(poolToRegion[poolAddress]).length > 0, \"PoolFactory: pool not found\");\r\n        \r\n        LiquidityPool(poolAddress).toggleStatus();\r\n    }\r\n    \r\n    /**\r\n     * @dev Add rewards to a specific pool's reward pot\r\n     */\r\n    function addRewardsToPool(address poolAddress, uint256 amount) external onlyOwner {\r\n        require(poolAddress != address(0), \"PoolFactory: invalid pool address\");\r\n        require(bytes(poolToRegion[poolAddress]).length > 0, \"PoolFactory: pool not found\");\r\n        require(amount > 0, \"PoolFactory: amount must be greater than 0\");\r\n        \r\n        // Transfer staking tokens from factory owner to the pool\r\n        IERC20(stakingTokenAddress).transferFrom(msg.sender, poolAddress, amount);\r\n        LiquidityPool(poolAddress).addRewardsToPot(amount);\r\n    }\r\n}",
+  "sourcePath": "C:\\Users\\nayak\\OneDrive\\Desktop\\Ageis-Blockchain\\truffle-project\\contracts\\PoolFactory.sol",
   "ast": {
     "absolutePath": "project:/contracts/PoolFactory.sol",
     "exportedSymbols": {
-      "IERC20": [
-        1011
-      ],
-      "ILiquidityPool": [
-        1459
-      ],
-      "IPoolFactory": [
-        1399
-      ],
-      "LPERC20": [
-        1388
-      ],
-      "LiquidityPool": [
-        3331
-      ],
-      "PoolFactory": [
-        3671
-      ],
-      "Stake": [
-        1408
-      ]
+      "IERC20": [1011],
+      "ILiquidityPool": [1459],
+      "IPoolFactory": [1399],
+      "LPERC20": [1388],
+      "LiquidityPool": [3331],
+      "PoolFactory": [3671],
+      "Stake": [1408]
     },
     "id": 3672,
     "license": "MIT",
@@ -318,12 +304,7 @@
     "nodes": [
       {
         "id": 3333,
-        "literals": [
-          "solidity",
-          "^",
-          "0.8",
-          ".19"
-        ],
+        "literals": ["solidity", "^", "0.8", ".19"],
         "nodeType": "PragmaDirective",
         "src": "32:24:9"
       },
@@ -343,9 +324,7 @@
         "abstract": false,
         "baseContracts": [],
         "canonicalName": "PoolFactory",
-        "contractDependencies": [
-          3331
-        ],
+        "contractDependencies": [3331],
         "contractKind": "contract",
         "documentation": {
           "id": 3335,
@@ -355,9 +334,7 @@
         },
         "fullyImplemented": true,
         "id": 3671,
-        "linearizedBaseContracts": [
-          3671
-        ],
+        "linearizedBaseContracts": [3671],
         "name": "PoolFactory",
         "nameLocation": "204:11:9",
         "nodeType": "ContractDefinition",
@@ -857,9 +834,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "752:7:9",
@@ -1219,9 +1194,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "1186:7:9",
@@ -1337,9 +1310,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "1274:7:9",
@@ -1494,9 +1465,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "1353:7:9",
@@ -1526,9 +1495,7 @@
                   "src": "1353:80:9"
                 },
                 {
-                  "assignments": [
-                    3432
-                  ],
+                  "assignments": [3432],
                   "declarations": [
                     {
                       "constant": false,
@@ -1551,9 +1518,7 @@
                         "pathNode": {
                           "id": 3430,
                           "name": "LiquidityPool",
-                          "nameLocations": [
-                            "1485:13:9"
-                          ],
+                          "nameLocations": ["1485:13:9"],
                           "nodeType": "IdentifierPath",
                           "referencedDeclaration": 3331,
                           "src": "1485:13:9"
@@ -1701,9 +1666,7 @@
                         "pathNode": {
                           "id": 3433,
                           "name": "LiquidityPool",
-                          "nameLocations": [
-                            "1513:13:9"
-                          ],
+                          "nameLocations": ["1513:13:9"],
                           "nodeType": "IdentifierPath",
                           "referencedDeclaration": 3331,
                           "src": "1513:13:9"
@@ -1736,9 +1699,7 @@
                   "src": "1485:97:9"
                 },
                 {
-                  "assignments": [
-                    3446
-                  ],
+                  "assignments": [3446],
                   "declarations": [
                     {
                       "constant": false,
@@ -2227,9 +2188,7 @@
                 "modifierName": {
                   "id": 3398,
                   "name": "onlyOwner",
-                  "nameLocations": [
-                    "1170:9:9"
-                  ],
+                  "nameLocations": ["1170:9:9"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 3378,
                   "src": "1170:9:9"
@@ -2562,9 +2521,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "2382:7:9",
@@ -2859,9 +2816,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "2666:7:9",
@@ -3006,9 +2961,7 @@
                 "modifierName": {
                   "id": 3529,
                   "name": "onlyOwner",
-                  "nameLocations": [
-                    "2646:9:9"
-                  ],
+                  "nameLocations": ["2646:9:9"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 3378,
                   "src": "2646:9:9"
@@ -3199,9 +3152,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "3009:7:9",
@@ -3292,9 +3243,7 @@
                 "modifierName": {
                   "id": 3556,
                   "name": "onlyOwner",
-                  "nameLocations": [
-                    "2989:9:9"
-                  ],
+                  "nameLocations": ["2989:9:9"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 3378,
                   "src": "2989:9:9"
@@ -3485,9 +3434,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "3285:7:9",
@@ -3682,9 +3629,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "3366:7:9",
@@ -3821,9 +3766,7 @@
                 "modifierName": {
                   "id": 3579,
                   "name": "onlyOwner",
-                  "nameLocations": [
-                    "3265:9:9"
-                  ],
+                  "nameLocations": ["3265:9:9"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 3378,
                   "src": "3265:9:9"
@@ -4014,9 +3957,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "3690:7:9",
@@ -4211,9 +4152,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "3771:7:9",
@@ -4323,9 +4262,7 @@
                       "name": "require",
                       "nodeType": "Identifier",
                       "overloadedDeclarations": [
-                        4294967278,
-                        4294967278,
-                        4294967278
+                        4294967278, 4294967278, 4294967278
                       ],
                       "referencedDeclaration": 4294967278,
                       "src": "3864:7:9",
@@ -4634,9 +4571,7 @@
                 "modifierName": {
                   "id": 3619,
                   "name": "onlyOwner",
-                  "nameLocations": [
-                    "3670:9:9"
-                  ],
+                  "nameLocations": ["3670:9:9"],
                   "nodeType": "IdentifierPath",
                   "referencedDeclaration": 3378,
                   "src": "3670:9:9"
@@ -4726,10 +4661,7 @@
         "scope": 3672,
         "src": "195:3961:9",
         "usedErrors": [],
-        "usedEvents": [
-          3362,
-          3366
-        ]
+        "usedEvents": [3362, 3366]
       }
     ],
     "src": "32:4124:9"
@@ -4809,12 +4741,12 @@
         "CrossPoolLib": "0x1b273e3E72fDc8B2eC58a8c3221aAC418aA1Aa27",
         "DebtLib": "0x2716a0F8e3Fc521294C736604f72AF1f0AF1440f"
       },
-      "address": "0xd14a29EDB9e0FE6D0511C7948f169020C1574D6C",
-      "transactionHash": "0xc09909ebcf0a084afafd2747cb7b396e4988291ee1dd451775b299d76fa32f0e"
+      "address": "0xf74bE518e57E40138eeeDd4C1DC63Cd30547F2c3",
+      "transactionHash": "0x075e223a0577c1c2b0824fad8bb5a4d34cc52c8fe3d562f7cf9dd25891b2bf09"
     }
   },
   "schemaVersion": "3.4.16",
-  "updatedAt": "2025-06-21T17:17:45.852Z",
+  "updatedAt": "2025-06-22T05:46:54.704Z",
   "networkType": "ethereum",
   "devdoc": {
     "details": "Factory contract for creating and managing regional liquidity pools",
